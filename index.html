@@ -4,6 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מעקב מפעלים – חשיפות מעל הרמה המותרת</title>
+<link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="מעקב חריגות">
+<script>
+(function(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 180;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, 180, 180, 32);
+  ctx.fill();
+  ctx.font = '100px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏭', 90, 95);
+  document.getElementById('apple-touch-icon').href = c.toDataURL('image/png');
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
