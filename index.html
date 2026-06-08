@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב מפעלים – חשיפות מעל הרמה המותרת</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f0f4f8;
+    color: #1a202c;
+    direction: rtl;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a5f, #2d6a9f);
+    color: white;
+    padding: 18px 30px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header p { font-size: 13px; opacity: 0.85; }
+  .flag { font-size: 28px; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #cbd5e0;
+  }
+  .tab-btn {
+    padding: 10px 22px;
+    border: none;
+    background: #e2e8f0;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4a5568;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: white;
+    color: #1e3a5f;
+    border-bottom: 2px solid white;
+    margin-bottom: -2px;
+  }
+  .tab-btn:hover:not(.active) { background: #bee3f8; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* FORM CARD */
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #bee3f8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group.half { grid-column: span 2; }
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  label .req { color: #e53e3e; }
+
+  input, select, textarea {
+    padding: 9px 12px;
+    border: 1.5px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    direction: rtl;
+    transition: border 0.2s;
+    background: #fafafa;
+  }
+  input[type="date"] {
+    direction: ltr;
+    text-align: left;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #2d6a9f;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(45,106,159,0.1);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+  .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: #2d6a9f; color: white; }
+  .btn-primary:hover { background: #1e3a5f; transform: translateY(-1px); }
+  .btn-secondary { background: #e2e8f0; color: #4a5568; }
+  .btn-secondary:hover { background: #cbd5e0; }
+  .btn-danger { background: #fed7d7; color: #c53030; }
+  .btn-danger:hover { background: #feb2b2; }
+  .btn-success { background: #c6f6d5; color: #276749; }
+  .btn-success:hover { background: #9ae6b4; }
+  .btn-export { background: #1e7e34; color: white; }
+  .btn-export:hover { background: #155724; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-top: 4px solid #2d6a9f;
+  }
+  .stat-card.north { border-top-color: #38a169; }
+  .stat-card.south { border-top-color: #e53e3e; }
+  .stat-card.ta { border-top-color: #d69e2e; }
+  .stat-card.jerusalem { border-top-color: #805ad5; }
+  .stat-card.center { border-top-color: #dd6b20; }
+  .stat-num { font-size: 28px; font-weight: 800; color: #1e3a5f; }
+  .stat-label { font-size: 11px; color: #718096; margin-top: 3px; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-bar input, .filter-bar select {
+    padding: 8px 12px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 150px;
+  }
+  .filter-bar label { font-size: 13px; white-space: nowrap; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 13px;
+  }
+  thead tr { background: #1e3a5f; color: white; }
+  th {
+    padding: 11px 10px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { background: #2d6a9f; }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:nth-child(even) { background: #f7fafc; }
+  tbody tr:hover { background: #ebf8ff; }
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+    max-width: 220px;
+  }
+  .td-actions { display: flex; gap: 5px; }
+  .btn-icon {
+    width: 28px; height: 28px;
+    border: none; border-radius: 5px;
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-edit { background: #bee3f8; color: #2b6cb0; }
+  .btn-edit:hover { background: #90cdf4; }
+  .btn-del { background: #fed7d7; color: #c53030; }
+  .btn-del:hover { background: #feb2b2; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-north { background: #c6f6d5; color: #276749; }
+  .badge-south { background: #fed7d7; color: #c53030; }
+  .badge-ta { background: #fefcbf; color: #744210; }
+  .badge-jerusalem { background: #e9d8fd; color: #553c9a; }
+  .badge-center { background: #feebc8; color: #7b341e; }
+  .badge-other { background: #e2e8f0; color: #4a5568; }
+
+  /* REPORT VIEW */
+  .region-block {
+    margin-bottom: 28px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+  }
+  .region-header {
+    padding: 12px 18px;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .region-north { background: #38a169; }
+  .region-south { background: #e53e3e; }
+  .region-ta { background: #d69e2e; }
+  .region-jerusalem { background: #805ad5; }
+  .region-center { background: #dd6b20; }
+  .region-other { background: #718096; }
+
+  .no-data {
+    text-align: center;
+    padding: 40px;
+    color: #a0aec0;
+    font-size: 15px;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #276749;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.3s;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 700px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    direction: rtl;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 20px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #a0aec0;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+
+  /* ARCHIVE */
+  .btn-archive { background: #fbd38d; color: #744210; }
+  .btn-archive:hover { background: #f6ad55; }
+  .btn-restore { background: #c6f6d5; color: #276749; }
+  .btn-restore:hover { background: #9ae6b4; }
+  .archive-badge { background: #feebc8; color: #7b341e; border-right: 3px solid #dd6b20; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .summary-text { font-size: 12px; color: #4a5568; font-style: italic; max-width: 260px; white-space: normal; overflow: visible; word-break: break-word; }
+
+  @media (max-width: 768px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.half { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="flag">🏭</div>
+  <div>
+    <h1>מעקב מפעלים – חשיפות מעל הרמה המותרת לחשיפה</h1>
+    <p>מערכת ניהול ומעקב אחר חריגות | משרד העבודה – מינהל הבטיחות והבריאות התעסוקתית</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('form')">➕ הוספת רשומה</button>
+    <button class="tab-btn" onclick="switchTab('table')">📋 כל הרשומות</button>
+    <button class="tab-btn" onclick="switchTab('report')">📊 דוח לפי אזורים</button>
+    <button class="tab-btn" onclick="switchTab('archive')">🗃️ ארכיון טופל</button>
+  </div>
+
+  <!-- TAB: FORM -->
+  <div class="tab-content active" id="tab-form">
+    <div class="card">
+      <div class="card-title">📝 <span id="formTitle">הוספת מפעל חדש</span></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>מספר תיק <span class="req">*</span></label>
+          <input type="text" id="f_id" placeholder="למשל: 69040">
+        </div>
+        <div class="form-group half">
+          <label>שם המפעל <span class="req">*</span></label>
+          <input type="text" id="f_name" placeholder="שם מלא של המפעל">
+        </div>
+        <div class="form-group">
+          <label>אזור פיקוח <span class="req">*</span></label>
+          <select id="f_region">
+            <option value="">-- בחר אזור --</option>
+            <option>צפון</option>
+            <option>דרום</option>
+            <option>ירושלים</option>
+            <option>ת"א - תעשייה</option>
+            <option>ת"א - בניה</option>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label>כתובת</label>
+          <input type="text" id="f_address" placeholder="עיר, רחוב ומספר">
+        </div>
+        <div class="form-group">
+          <label>תאריך ניטור אחרון</label>
+          <input type="date" id="f_monitor_date">
+        </div>
+        <div class="form-group full">
+          <label>גורמים בהם עובדים נחשפו מעל הרמה המותרת לחשיפה <span class="req">*</span></label>
+          <textarea id="f_factors" placeholder="לדוגמה: מנגן, רעש, עצים, פחמן שחור..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>תאריך ביקור אחרון של מפקח</label>
+          <input type="date" id="f_visit_date">
+        </div>
+        <div class="form-group">
+          <label>מטרת הביקור</label>
+          <select id="f_visit_type">
+            <option value="">-- בחר --</option>
+            <option>פיקוח שותף</option>
+            <option>תאונת עבודה</option>
+            <option>רישיון עסק</option>
+            <option>גהות</option>
+            <option>מעקב</option>
+            <option>אחר</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>מפקח אחראי</label>
+          <input type="text" id="f_inspector" placeholder="שם המפקח">
+        </div>
+        <div class="form-group">
+          <label>סטטוס טיפול</label>
+          <select id="f_status">
+            <option value="">-- בחר --</option>
+            <option>נקלט לרשימה</option>
+            <option>נשלח למחוז</option>
+            <option>מתוכנן ביקור עם מעבדה</option>
+            <option>טופל ע"י מפקח</option>
+            <option>טופל יחד עם מעבדה</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>הערות</label>
+          <textarea id="f_notes" placeholder="כל הערה רלוונטית..."></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveRecord()">💾 שמור רשומה</button>
+        <button class="btn btn-secondary" onclick="clearForm()">🔄 נקה טופס</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: TABLE -->
+  <div class="tab-content" id="tab-table">
+    <div class="card">
+      <div class="card-title">📋 כל הרשומות</div>
+      <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="🔍  חיפוש חופשי..." oninput="renderTable()">
+        <select id="filterRegion" onchange="renderTable()">
+          <option value="">כל האזורים</option>
+          <option>צפון</option>
+          <option>דרום</option>
+          <option>ירושלים</option>
+          <option>ת"א - תעשייה</option>
+          <option>ת"א - בניה</option>
+        </select>
+        <select id="filterStatus" onchange="renderTable()">
+          <option value="">כל הסטטוסים</option>
+          <option>נקלט לרשימה</option>
+          <option>נשלח למחוז</option>
+          <option>מתוכנן ביקור עם מעבדה</option>
+          <option>טופל ע"י מפקח</option>
+          <option>טופל יחד עם מעבדה</option>
+        </select>
+        <select id="filterInspector" onchange="renderTable()">
+          <option value="">כל המפקחים</option>
+        </select>
+        <button class="btn btn-export" onclick="exportToExcel()">⬇️ ייצוא Excel</button>
+        <button class="btn btn-export" style="background:#17648a;" onclick="exportFiltered()">⬇️ ייצוא מסונן</button>
+        <button class="btn" style="background:#7b2d8b; color:white;" onclick="exportNewRecords()" title="ייצוא רק הרשומות שנוספו מאז הייצוא האחרון">🆕 ייצוא רשומות חדשות</button>
+        <button class="btn btn-secondary" onclick="markAllExported()" title="סמן את כל הרשומות כנשלח ועדכן סטטוס">✔ סמן הכל נשלח</button>
+        <button class="btn btn-danger" id="btnDeleteSelected" style="display:none;" onclick="deleteSelected()">🗑️ מחק נבחרים (<span id="selectedCount">0</span>)</button>
+      </div>
+      <div class="table-wrap">
+        <table id="mainTable">
+          <thead>
+            <tr>
+              <th style="width:36px;"><input type="checkbox" id="checkAll" onclick="toggleCheckAll(this)" title="בחר הכל / בטל הכל"></th>
+              <th onclick="sortBy('id')">#תיק</th>
+              <th onclick="sortBy('name')">שם המפעל</th>
+              <th onclick="sortBy('region')">אזור</th>
+              <th>גורמי חשיפה</th>
+              <th onclick="sortBy('monitor_date')">ניטור אחרון</th>
+              <th onclick="sortBy('visit_date')">ביקור אחרון</th>
+              <th>מפקח</th>
+              <th>סטטוס</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: REPORT -->
+  <div class="tab-content" id="tab-report">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+      <h2 style="font-size:18px; color:#1e3a5f;">📊 דוח מפורט לפי אזורי פיקוח</h2>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-export" onclick="exportReportExcel()">⬇️ ייצוא כל האזורים (Excel)</button>
+        <div style="display:flex; gap:6px; align-items:center; background:white; padding:6px 10px; border-radius:7px; box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+          <select id="exportRegionSelect" style="padding:7px 10px; font-size:13px; border:1.5px solid #cbd5e0; border-radius:6px; min-width:160px;">
+            <option value="">-- בחר אזור --</option>
+            <option>צפון</option>
+            <option>דרום</option>
+            <option>ירושלים</option>
+            <option>ת"א - תעשייה</option>
+            <option>ת"א - בניה</option>
+          </select>
+          <button class="btn btn-export" style="background:#2d6a9f;" onclick="exportSingleRegion()">⬇️ ייצוא אזור נבחר</button>
+        </div>
+        <button class="btn btn-secondary" onclick="window.print()">🖨️ הדפסה</button>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+
+</div>
+
+
+  <!-- TAB: ARCHIVE -->
+  <div class="tab-content" id="tab-archive">
+    <div class="card">
+      <div class="card-title">🗃️ ארכיון – מפעלים שטופלו <span id="archiveCount" style="font-size:13px; color:#a0aec0; font-weight:400;"></span></div>
+      <div class="filter-bar">
+        <input type="text" id="archiveSearch" placeholder="🔍  חיפוש בארכיון..." oninput="renderArchive()">
+        <select id="archiveFilterRegion" onchange="renderArchive()">
+          <option value="">כל האזורים</option>
+          <option>ירושלים</option><option>ת"א - תעשייה</option><option>ת"א - בניה</option>
+        </select>
+        <select id="archiveFilterType" onchange="renderArchive()">
+          <option value="">כל סוגי הטיפול</option>
+          <option>ביקור מפקח</option>
+          <option>בדיקת מעבדה</option>
+          <option>מפקח + מעבדה</option>
+          <option>אחר</option>
+        </select>
+        <button class="btn btn-export" onclick="exportArchive()">⬇️ ייצוא ארכיון Excel</button>
+      </div>
+      <div class="table-wrap">
+        <table id="archiveTable">
+          <thead>
+            <tr>
+              <th>#תיק</th>
+              <th>שם המפעל</th>
+              <th>אזור</th>
+              <th>מפקח</th>
+              <th>סטטוס סגירה</th>
+              <th>סיכום טיפול</th>
+              <th>תאריך סגירה</th>
+              <th>פעולה</th>
+            </tr>
+          </thead>
+          <tbody id="archiveBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+<!-- ARCHIVE MODAL -->
+<div class="modal-overlay" id="archiveModal">
+  <div class="modal">
+    <div class="modal-title">🗃️ העברה לארכיון – <span id="archiveModalName"></span></div>
+    <p style="color:#4a5568; margin-bottom:18px; font-size:13px; line-height:1.6;">
+      המפעל יוסר מהרשימה הפעילה ויועבר לארכיון. ניתן להחזירו בכל עת.
+    </p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>סוג טיפול</label>
+        <select id="arch_type">
+          <option value="">-- בחר --</option>
+          <option>ביקור מפקח</option>
+          <option>בדיקת מעבדה</option>
+          <option>מפקח + מעבדה</option>
+          <option>אחר</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>סיכום טיפול <span style="color:#718096; font-weight:400;">(מה בוצע, הערות לסגירה)</span></label>
+        <textarea id="arch_summary" rows="4" placeholder="לדוגמה: בוצע ביקור גהות ב-15.5.2026. נמצא שהמפעל יישם בקרות הנדסיות. הרמות ירדו מתחת לרמה המותרת. הוצא אישור סגירה."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-archive" onclick="confirmArchive()">🗃️ העבר לארכיון</button>
+      <button class="btn btn-secondary" onclick="closeArchiveModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ עריכת רשומה</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>מספר תיק</label>
+        <input type="text" id="e_id">
+      </div>
+      <div class="form-group half">
+        <label>שם המפעל</label>
+        <input type="text" id="e_name">
+      </div>
+      <div class="form-group">
+        <label>אזור פיקוח</label>
+        <select id="e_region">
+          <option value="">-- בחר אזור --</option>
+          <option>צפון</option>
+          <option>דרום</option>
+          <option>ירושלים</option>
+          <option>ת"א - תעשייה</option>
+          <option>ת"א - בניה</option>
+        </select>
+      </div>
+      <div class="form-group half">
+        <label>כתובת</label>
+        <input type="text" id="e_address">
+      </div>
+      <div class="form-group">
+        <label>תאריך ניטור אחרון</label>
+        <input type="date" id="e_monitor_date">
+      </div>
+      <div class="form-group full">
+        <label>גורמי חשיפה</label>
+        <textarea id="e_factors"></textarea>
+      </div>
+      <div class="form-group">
+        <label>תאריך ביקור אחרון</label>
+        <input type="date" id="e_visit_date">
+      </div>
+      <div class="form-group">
+        <label>מטרת הביקור</label>
+        <select id="e_visit_type">
+          <option value="">-- בחר --</option>
+          <option>פיקוח שותף</option>
+          <option>תאונת עבודה</option>
+          <option>רישיון עסק</option>
+          <option>גהות</option>
+          <option>מעקב</option>
+          <option>אחר</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>מפקח אחראי</label>
+        <input type="text" id="e_inspector">
+      </div>
+      <div class="form-group">
+        <label>סטטוס טיפול</label>
+        <select id="e_status">
+          <option value="">-- בחר --</option>
+          <option>נקלט לרשימה</option>
+          <option>נשלח למחוז</option>
+          <option>מתוכנן ביקור עם מעבדה</option>
+          <option>טופל ע"י מפקח</option>
+          <option>טופל יחד עם מעבדה</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>הערות</label>
+        <textarea id="e_notes"></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveEdit()">💾 שמור שינויים</button>
+      <button class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✅ הרשומה נשמרה בהצלחה</div>
+
+<!-- CONFIG BANNER -->
+<div id="configBanner" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:14px; padding:32px; max-width:560px; width:95%; direction:rtl; text-align:right;">
+    <div style="font-size:22px; font-weight:800; color:#1e3a5f; margin-bottom:12px;">⚙️ הגדרת חיבור ל-Google Sheets</div>
+    <p style="color:#4a5568; margin-bottom:16px; line-height:1.7;">
+      לחבר את הממשק ל-Google Sheets, הדבק את ה-<strong>Web App URL</strong> שקיבלת מ-Google Apps Script:
+    </p>
+    <input id="urlInput" type="text" placeholder="https://script.google.com/macros/s/..."
+      style="width:100%; padding:10px 14px; border:2px solid #2d6a9f; border-radius:8px; font-size:13px; margin-bottom:14px; direction:ltr;">
+    <div style="display:flex; gap:10px;">
+      <button onclick="applyScriptUrl()" style="flex:1; padding:10px; background:#2d6a9f; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:14px;">✅ שמור וחבר</button>
+    </div>
+    <p style="margin-top:14px; font-size:12px; color:#a0aec0;">
+      ראה הוראות מלאות בקובץ <strong>הוראות_התקנה.html</strong>
+    </p>
+  </div>
+</div>
+
+<!-- SPINNER -->
+<div id="spinner" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.7); z-index:1500; align-items:center; justify-content:center;">
+  <div style="background:white; border-radius:12px; padding:24px 32px; box-shadow:0 4px 20px rgba(0,0,0,0.15); text-align:center;">
+    <div style="font-size:32px; animation:spin 1s linear infinite; display:inline-block;">⏳</div>
+    <div style="margin-top:10px; font-weight:600; color:#1e3a5f;">טוען נתונים...</div>
+  </div>
+</div>
+<style>@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }</style>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────
+// הדבק כאן את כתובת ה-Web App URL לאחר פרסום ב-Google Apps Script:
+// הדבק כאן את ה-Web App URL שלך מ-Google Apps Script:
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJok81BuEtlyP-XErKoAqqDA0Wz2AwrjO7sEpbzp75dmkLNaX9BJ7RBKRieN8blgnQ/exec';
+
+let records = [];
+let editingIndex = -1;
+let sortField = '';
+let sortAsc = true;
+
+// ─── API HELPERS ───────────────────────────────────────────────
+// (הגדרות מלאות בסעיף URL PERSISTENCE למטה)
+
+function recToSheetRow(rec) {
+  return {
+    'מספר תיק':         rec.id           || '',
+    'שם המפעל':          rec.name         || '',
+    'אזור פיקוח':        rec.region       || '',
+    'כתובת':             rec.address      || '',
+    'תאריך ניטור אחרון': rec.monitor_date || '',
+    'גורמי חשיפה':       rec.factors      || '',
+    'תאריך ביקור אחרון': rec.visit_date   || '',
+    'מטרת ביקור':        rec.visit_type   || '',
+    'מפקח אחראי':        rec.inspector    || '',
+    'סטטוס טיפול':       rec.status       || '',
+    'הערות':             rec.notes        || '',
+    'תאריך הוספה':       rec.created_at   || ''
+  };
+}
+
+function showBanner() {
+  document.getElementById('configBanner').style.display = 'flex';
+}
+
+function showSpinner(on) {
+  document.getElementById('spinner').style.display = on ? 'flex' : 'none';
+}
+
+function cleanDate(d) {
+  if (!d) return '';
+  // Extract YYYY-MM-DD directly to avoid UTC timezone shift
+  const s = String(d);
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return '';
+}
+
+// ─── REGION CONFIG ────────────────────────────────────────────
+const regionConfig = {
+  'צפון':           { cls: 'north',     badge: 'badge-north',     color: '#38a169' },
+  'דרום':           { cls: 'south',     badge: 'badge-south',     color: '#e53e3e' },
+  'ת"א - תעשייה':  { cls: 'ta',        badge: 'badge-ta',        color: '#d69e2e' },
+  'ת"א - בניה':    { cls: 'ta',        badge: 'badge-ta',        color: '#d69e2e' },
+  'ירושלים':        { cls: 'jerusalem', badge: 'badge-jerusalem',  color: '#805ad5' },
+  'מרכז':           { cls: 'center',    badge: 'badge-center',    color: '#dd6b20' },
+};
+function getRegionCfg(r) {
+  return regionConfig[r] || { cls: 'other', badge: 'badge-other', color: '#718096' };
+}
+
+// ─── TABS ──────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'table') renderTable();
+  if (name === 'report') renderReport();
+  if (name === 'form') { editingIndex = -1; clearForm(); }
+  if (name === 'archive') loadArchive();
+}
+
+// ─── FORM ──────────────────────────────────────────────────────
+function clearForm() {
+  ['f_id','f_name','f_address','f_factors','f_inspector','f_notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  ['f_region','f_visit_type','f_status'].forEach(id => {
+    document.getElementById(id).selectedIndex = 0;
+  });
+  ['f_monitor_date','f_visit_date'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('formTitle').textContent = 'הוספת מפעל חדש';
+  editingIndex = -1;
+}
+
+async function saveRecord() {
+  const id = document.getElementById('f_id').value.trim();
+  const name = document.getElementById('f_name').value.trim();
+  const region = document.getElementById('f_region').value;
+  const factors = document.getElementById('f_factors').value.trim();
+
+  if (!id || !name || !region || !factors) {
+    alert('אנא מלא את כל שדות החובה (מסומנים ב-*)');
+    return;
+  }
+
+  const rec = {
+    id, name, region,
+    address:      document.getElementById('f_address').value.trim(),
+    monitor_date: document.getElementById('f_monitor_date').value,
+    factors,
+    visit_date:   document.getElementById('f_visit_date').value,
+    visit_type:   document.getElementById('f_visit_type').value,
+    inspector:    document.getElementById('f_inspector').value.trim(),
+    status:       document.getElementById('f_status').value,
+    notes:        document.getElementById('f_notes').value.trim(),
+    created_at:   new Date().toLocaleDateString('he-IL')
+  };
+
+  showSpinner(true);
+  try {
+    await apiCall({ action: 'add', record: recToSheetRow(rec) });
+    showToast('✅ הרשומה נוספה בהצלחה ונשמרה ב-Google Sheets');
+    clearForm();
+    await loadData();
+loadArchive();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+// ─── TABLE ─────────────────────────────────────────────────────
+function renderTable() {
+  updateInspectorFilter();
+  let data = getFilteredRecords();
+
+  const tbody = document.getElementById('tableBody');
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" class="no-data">אין רשומות תואמות</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map((r, i) => {
+    const origIndex = records.indexOf(r);
+    const rowKey = r._row || origIndex;
+    const cfg = getRegionCfg(r.region);
+    const statusColor = {
+      'נקלט לרשימה': '#fefcbf',
+      'נשלח למחוז': '#bee3f8',
+      'מתוכנן ביקור עם מעבדה': '#feebc8',
+      'טופל ע"י מפקח': '#c6f6d5',
+      'טופל יחד עם מעבדה': '#b2f5ea'
+    }[r.status] || '#f7fafc';
+
+    return `<tr>
+      <td style="text-align:center;"><input type="checkbox" class="row-check" data-idx="${origIndex}" onchange="updateDeleteBtn()"></td>
+      <td><strong>${r.id || '—'}</strong></td>
+      <td>${r.name}</td>
+      <td><span class="badge ${cfg.badge}">${r.region || '—'}</span></td>
+      <td title="${r.factors}">${r.factors.length > 40 ? r.factors.substring(0,40)+'...' : r.factors}</td>
+      <td>${r.monitor_date ? formatDate(r.monitor_date) : '—'}</td>
+      <td>${r.visit_date ? formatDate(r.visit_date) : '<span style="color:#e53e3e">⚠ לא ביקרו</span>'}</td>
+      <td>${r.inspector || '—'}</td>
+      <td><span style="background:${statusColor}; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">${r.status || '—'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn-icon btn-edit" onclick="openEdit(${origIndex})" title="עריכה">✏️</button>
+          <button class="btn-icon btn-del" onclick="deleteRecord(${origIndex})" title="מחיקה">🗑️</button>
+          <button class="btn-icon btn-archive" onclick="openArchiveModal(${origIndex})" title="העבר לארכיון" style="background:#fbd38d; color:#744210; width:28px; height:28px; border:none; border-radius:5px; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center;">🗃️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  updateDeleteBtn();
+}
+
+function sortBy(field) {
+  if (sortField === field) sortAsc = !sortAsc;
+  else { sortField = field; sortAsc = true; }
+  renderTable();
+}
+
+function updateInspectorFilter() {
+  const sel = document.getElementById('filterInspector');
+  if (!sel) return;
+  const current = sel.value;
+  const inspectors = [...new Set(records.map(r => r.inspector).filter(Boolean))].sort((a,b) => a.localeCompare(b,'he'));
+  sel.innerHTML = '<option value="">כל המפקחים</option>' + inspectors.map(i => `<option value="${i}">${i}</option>`).join('');
+  if (inspectors.includes(current)) sel.value = current;
+}
+
+function getFilteredRecords() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const regionF = document.getElementById('filterRegion').value;
+  const statusF = document.getElementById('filterStatus').value;
+  const inspectorF = document.getElementById('filterInspector').value;
+
+  let data = records.filter(r => {
+    const text = Object.values(r).join(' ').toLowerCase();
+    return (!search || text.includes(search))
+        && (!regionF || r.region === regionF)
+        && (!statusF || r.status === statusF)
+        && (!inspectorF || r.inspector === inspectorF);
+  });
+
+  if (sortField) {
+    data.sort((a, b) => {
+      const va = a[sortField] || '';
+      const vb = b[sortField] || '';
+      return sortAsc ? va.localeCompare(vb, 'he') : vb.localeCompare(va, 'he');
+    });
+  }
+  return data;
+}
+
+function exportFiltered() {
+  const inspectorF = document.getElementById('filterInspector').value;
+  const regionF = document.getElementById('filterRegion').value;
+  const statusF = document.getElementById('filterStatus').value;
+
+  // אם יש רשומות מסומנות בצ'קבוקס — ייצא רק אותן (ללא תלות בסינון)
+  const checkedBoxes = [...document.querySelectorAll('.row-check:checked')];
+  let data;
+  let exportLabel;
+  if (checkedBoxes.length > 0) {
+    const indices = checkedBoxes.map(cb => parseInt(cb.dataset.idx));
+    data = indices.map(i => records[i]);
+    exportLabel = 'נבחרים_' + checkedBoxes.length;
+  } else {
+    // אין סימון — ייצא לפי סינון רגיל
+    data = getFilteredRecords();
+    exportLabel = inspectorF ? inspectorF : (regionF || statusF || 'מסונן');
+  }
+
+  if (data.length === 0) { alert('אין רשומות לייצוא'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות'];
+  const rows = [headers, ...data.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, exportLabel.substring(0,31));
+  XLSX.writeFile(wb, 'ייצוא_' + exportLabel + '_' + today() + '.xlsx');
+  showToast('📥 יוצאו ' + data.length + ' רשומות');
+}
+
+async function deleteRecord(index) {
+  if (!confirm(`למחוק את המפעל "${records[index].name}"?`)) return;
+  const rowIndex = records[index]._row;
+  showSpinner(true);
+  try {
+    await apiCall({ action: 'delete', id: rowIndex });
+    showToast('🗑️ הרשומה נמחקה');
+    await loadData();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+// ─── EDIT MODAL ────────────────────────────────────────────────
+function openEdit(index) {
+  editingIndex = index;
+  const r = records[index];
+  document.getElementById('e_id').value = r.id || '';
+  document.getElementById('e_name').value = r.name || '';
+  document.getElementById('e_address').value = r.address || '';
+  document.getElementById('e_monitor_date').value = r.monitor_date || '';
+  document.getElementById('e_factors').value = r.factors || '';
+  document.getElementById('e_visit_date').value = r.visit_date || '';
+  document.getElementById('e_inspector').value = r.inspector || '';
+  document.getElementById('e_notes').value = r.notes || '';
+  setSelectValue('e_region', r.region);
+  setSelectValue('e_visit_type', r.visit_type);
+  setSelectValue('e_status', r.status);
+  document.getElementById('editModal').classList.add('open');
+}
+
+async function saveEdit() {
+  const r = records[editingIndex];
+  r.id           = document.getElementById('e_id').value.trim();
+  r.name         = document.getElementById('e_name').value.trim();
+  r.region       = document.getElementById('e_region').value;
+  r.address      = document.getElementById('e_address').value.trim();
+  r.monitor_date = document.getElementById('e_monitor_date').value;
+  r.factors      = document.getElementById('e_factors').value.trim();
+  r.visit_date   = document.getElementById('e_visit_date').value;
+  r.visit_type   = document.getElementById('e_visit_type').value;
+  r.inspector    = document.getElementById('e_inspector').value.trim();
+  r.status       = document.getElementById('e_status').value;
+  r.notes        = document.getElementById('e_notes').value.trim();
+
+  showSpinner(true);
+  try {
+    await apiCall({ action: 'update', id: r._row, record: recToSheetRow(r) });
+    closeModal();
+    showToast('✏️ הרשומה עודכנה בהצלחה');
+    await loadData();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+  editingIndex = -1;
+}
+
+// ─── REPORT ────────────────────────────────────────────────────
+function renderReport() {
+  const container = document.getElementById('reportContent');
+  if (records.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>אין נתונים להצגה. אנא הוסף רשומות תחילה.</p></div>`;
+    return;
+  }
+
+  const regions = [...new Set(records.map(r => r.region).filter(Boolean))];
+  const unregioned = records.filter(r => !r.region);
+
+  let html = '';
+
+  // Summary table
+  html += `<div class="card" style="margin-bottom:20px;">
+    <div class="card-title">📈 סיכום כללי – כל האזורים</div>
+    <div style="overflow-x:auto;">
+    <table style="min-width:900px;">
+      <thead><tr>
+        <th>אזור פיקוח</th>
+        <th>סה"כ מפעלים</th>
+        <th>נקלט לרשימה</th>
+        <th>נשלח למחוז</th>
+        <th style="background:#d69e2e; color:white;">ממתין להתייחסות מחוז</th>
+        <th>מתוכנן ביקור</th>
+        <th>מתוכנן ביקור עם מעבדה</th>
+        <th>טופל ע"י מפקח</th>
+        <th>טופל יחד עם מעבדה</th>
+        <th style="background:#c53030; color:white;">לא נערך ביקור פיקוח</th>
+        <th style="background:#744210; color:white;">🗃️ בארכיון</th>
+      </tr></thead>
+      <tbody>`;
+
+  for (const region of [...regions, null]) {
+    const recs = region ? records.filter(r => r.region === region) : unregioned;
+    if (recs.length === 0 && region !== null) continue;
+    if (!region && recs.length === 0) continue;
+    const naklatLerisha = recs.filter(r => r.status === 'נקלט לרשימה').length;
+    const sent = recs.filter(r => r.status === 'נשלח למחוז').length;
+    const waitingDistrict = sent; // כל מי שנשלח למחוז = ממתין להתייחסות
+    const plannedOnly = recs.filter(r => r.status === 'מתוכנן ביקור').length;
+    const plannedLab = recs.filter(r => r.status === 'מתוכנן ביקור עם מעבדה').length;
+    const treatedInspector = recs.filter(r => r.status === 'טופל ע"י מפקח').length;
+    const treatedLab = recs.filter(r => r.status === 'טופל יחד עם מעבדה').length;
+    const noVisit = recs.filter(r => !r.visit_date).length;
+    const cfg = getRegionCfg(region || '');
+    // Archive stats for this region
+    const archRecs = archiveRecords.filter(r => region ? r.region === region : !r.region);
+    const archiveForRegion = archRecs.length;
+    const archInspector = archRecs.filter(r => r.close_type === 'ביקור מפקח').length;
+    const archLab = archRecs.filter(r => r.close_type === 'בדיקת מעבדה').length;
+    const archBoth = archRecs.filter(r => r.close_type === 'מפקח + מעבדה').length;
+    let archiveParts = [];
+    if (archInspector > 0) archiveParts.push(`מפקח: ${archInspector}`);
+    if (archLab > 0) archiveParts.push(`מעבדה: ${archLab}`);
+    if (archBoth > 0) archiveParts.push(`שניהם: ${archBoth}`);
+    const archiveDetail = archiveParts.length > 0 ? `<div style="font-size:10px;color:#a0aec0;margin-top:2px;">${archiveParts.join(' | ')}</div>` : '';
+    html += `<tr>
+      <td><span class="badge ${cfg.badge}">${region || 'ללא אזור'}</span></td>
+      <td><strong>${recs.length + archiveForRegion}</strong> <span style="font-size:10px;color:#a0aec0;">(${recs.length}+${archiveForRegion}🗃️)</span></td>
+      <td style="color:${naklatLerisha>0?'#d69e2e':'inherit'}">${naklatLerisha}</td>
+      <td style="color:${sent>0?'#2b6cb0':'inherit'}">${sent}</td>
+      <td style="background:#fff8e1; font-weight:700; color:${waitingDistrict>0?'#b7791f':'inherit'}">${waitingDistrict}</td>
+      <td style="color:${plannedOnly>0?'#dd6b20':'inherit'}">${plannedOnly}</td>
+      <td style="color:${plannedLab>0?'#dd6b20':'inherit'}; font-weight:${plannedLab>0?'700':'400'}">${plannedLab}</td>
+      <td style="color:${treatedInspector>0?'#38a169':'inherit'}">${treatedInspector}</td>
+      <td style="color:${treatedLab>0?'#38a169':'inherit'}">${treatedLab}</td>
+      <td style="background:#fff5f5; font-weight:700; color:${noVisit>0?'#c53030':'inherit'}">${noVisit}</td>
+      <td style="background:#fef3e2; font-weight:700; color:${archiveForRegion>0?'#744210':'inherit'}">${archiveForRegion}${archiveDetail}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table></div></div>`;
+
+  // Per-region blocks
+  for (const region of regions) {
+    const recs = records.filter(r => r.region === region);
+    if (recs.length === 0) continue;
+    const cfg = getRegionCfg(region);
+    const noVisit = recs.filter(r => !r.visit_date).length;
+    const waitingDistrict = recs.filter(r => r.status === 'נשלח למחוז').length;
+
+    html += `<div class="region-block">
+      <div class="region-header region-${cfg.cls}">
+        <span>🗺️ ${region} — ${recs.length} מפעלים</span>
+        <span style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${noVisit > 0 ? `<span style="background:rgba(255,255,255,0.25); padding:3px 10px; border-radius:10px; font-size:13px;">⚠️ ${noVisit} ללא ביקור פיקוח</span>` : ''}
+          ${waitingDistrict > 0 ? `<span style="background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:10px; font-size:13px;">📬 ${waitingDistrict} ממתין למחוז</span>` : ''}
+        </span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>#תיק</th>
+          <th>שם המפעל</th>
+          <th>כתובת</th>
+          <th>גורמי חשיפה</th>
+          <th>ניטור אחרון</th>
+          <th>ביקור אחרון</th>
+          <th>מטרת ביקור</th>
+          <th>מפקח</th>
+          <th>סטטוס</th>
+          <th>הערות</th>
+        </tr></thead>
+        <tbody>`;
+
+    for (const r of recs) {
+      const statusColor = {
+        'בטיפול': '#fefcbf',
+        'נשלח למחוז': '#bee3f8',
+        'מתוכנן ביקור': '#feebc8',
+        'בוצע ביקור גהות': '#c6f6d5'
+      }[r.status] || '';
+
+      html += `<tr>
+        <td>${r.id || '—'}</td>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.address || '—'}</td>
+        <td>${r.factors || '—'}</td>
+        <td>${r.monitor_date ? formatDate(r.monitor_date) : '—'}</td>
+        <td>${r.visit_date ? formatDate(r.visit_date) : '<span style="color:#e53e3e;font-weight:700">⚠ לא ביקרו</span>'}</td>
+        <td>${r.visit_type || '—'}</td>
+        <td>${r.inspector || '—'}</td>
+        <td><span style="background:${statusColor}; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600;">${r.status || '—'}</span></td>
+        <td>${r.notes || '—'}</td>
+      </tr>`;
+    }
+
+    html += `</tbody></table></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ─── STATS ─────────────────────────────────────────────────────
+function updateStats() {
+  const bar = document.getElementById('statsBar');
+  const total = records.length;
+  const naklatLerisha = records.filter(r => r.status === 'נקלט לרשימה').length;
+  const sentToDistrict = records.filter(r => r.status === 'נשלח למחוז').length;
+  const plannedLab = records.filter(r => r.status === 'מתוכנן ביקור עם מעבדה').length;
+  const treatedInspector = records.filter(r => r.status === 'טופל ע"י מפקח').length;
+  const treatedLab = records.filter(r => r.status === 'טופל יחד עם מעבדה').length;
+  const noVisit = records.filter(r => !r.visit_date).length;
+
+  const regionCounts = {};
+  records.forEach(r => {
+    if (r.region) regionCounts[r.region] = (regionCounts[r.region] || 0) + 1;
+  });
+
+  let html = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">סה"כ מפעלים</div></div>
+    <div class="stat-card ta"><div class="stat-num" style="color:#d69e2e">${naklatLerisha}</div><div class="stat-label">נקלט לרשימה</div></div>
+    <div class="stat-card" style="border-top-color:#2b6cb0;"><div class="stat-num" style="color:#2b6cb0">${sentToDistrict}</div><div class="stat-label">נשלח למחוז</div></div>
+    <div class="stat-card" style="border-top-color:#dd6b20;"><div class="stat-num" style="color:#dd6b20">${plannedLab}</div><div class="stat-label">מתוכנן ביקור עם מעבדה</div></div>
+    <div class="stat-card north"><div class="stat-num" style="color:#38a169">${treatedInspector + treatedLab}</div><div class="stat-label">טופל</div></div>
+    <div class="stat-card south"><div class="stat-num" style="color:#e53e3e">${noVisit}</div><div class="stat-label">לא נערך ביקור פיקוח</div></div>
+  `;
+
+  const clsMap = { 'צפון':'north','דרום':'south','מרכז':'center','ירושלים':'jerusalem' };
+  for (const [reg, cnt] of Object.entries(regionCounts)) {
+    const c = clsMap[reg] || 'ta';
+    html += `<div class="stat-card ${c}"><div class="stat-num">${cnt}</div><div class="stat-label">${reg}</div></div>`;
+  }
+
+  // Archive stats card
+  if (archiveRecords && archiveRecords.length > 0) {
+    const archiveTotal = archiveRecords.length;
+    const byType = {};
+    archiveRecords.forEach(r => {
+      const t = r.close_type || 'אחר';
+      byType[t] = (byType[t] || 0) + 1;
+    });
+    const typeStr = Object.entries(byType).map(([k,v]) => `${k}: ${v}`).join(' | ');
+    html += `<div class="stat-card" style="border-top-color:#744210;">
+      <div class="stat-num" style="color:#744210;">🗃️ ${archiveTotal}</div>
+      <div class="stat-label">בארכיון</div>
+      <div style="font-size:10px; color:#a0aec0; margin-top:4px; line-height:1.4;">${typeStr}</div>
+    </div>`;
+  }
+
+  bar.innerHTML = html;
+}
+
+// ─── EXPORT EXCEL ──────────────────────────────────────────────
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות'];
+  const data = [headers, ...records.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'כל הרשומות');
+  XLSX.writeFile(wb, 'מעקב_חריגות_' + today() + '.xlsx');
+  showToast('📥 קובץ Excel יוצא בהצלחה');
+}
+
+function exportSingleRegion() {
+  const region = document.getElementById('exportRegionSelect').value;
+  if (!region) { alert('אנא בחר אזור מהרשימה'); return; }
+  const recs = records.filter(r => r.region === region);
+  if (recs.length === 0) { alert('אין רשומות לאזור: ' + region); return; }
+
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות'];
+  const data = [headers, ...recs.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, region.substring(0, 31));
+  XLSX.writeFile(wb, 'דוח_' + region + '_' + today() + '.xlsx');
+  showToast('📥 דוח ' + region + ' יוצא בהצלחה (' + recs.length + ' רשומות)');
+}
+
+function exportReportExcel() {
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות'];
+
+  // All data sheet
+  const allData = [headers, ...records.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes
+  ])];
+  const wsAll = XLSX.utils.aoa_to_sheet(allData);
+  wsAll['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsAll, 'כל הנתונים');
+
+  // Per-region sheets
+  const regions = [...new Set(records.map(r => r.region).filter(Boolean))];
+  for (const region of regions) {
+    const recs = records.filter(r => r.region === region);
+    const data = [headers, ...recs.map(r => [
+      r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+      r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes
+    ])];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, region.substring(0, 31));
+  }
+
+  XLSX.writeFile(wb, 'דוח_אזורי_חריגות_' + today() + '.xlsx');
+  showToast('📊 דוח אזורי יוצא בהצלחה');
+}
+
+// ─── UTILS ─────────────────────────────────────────────────────
+// Format date for Excel export: YYYY-MM-DD → DD/MM/YYYY string
+function fmtXls(d) {
+  if (!d) return '';
+  const m = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d);
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  // Always parse as local date from YYYY-MM-DD to avoid UTC timezone shift
+  const s = String(d);
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return d;
+}
+
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function setSelectValue(id, val) {
+  const sel = document.getElementById(id);
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === val) { sel.selectedIndex = i; return; }
+  }
+  sel.selectedIndex = 0;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('archiveModal').addEventListener('click', function(e) {
+  if (e.target === this) closeArchiveModal();
+});
+
+// ─── URL PERSISTENCE ───────────────────────────────────────────
+(function() {
+  const saved = localStorage.getItem('apps_script_url');
+  if (saved && saved.startsWith('https://')) {
+    window._SCRIPT_URL = saved;
+  }
+})();
+
+function getScriptUrl() {
+  return window._SCRIPT_URL || null;
+}
+
+// ─── FETCH HELPER ──────────────────────────────────────────────
+// גרסת GitHub Pages — בקשות ישירות ל-Google Apps Script (ללא פרוקסי)
+function getEffectiveScriptUrl() {
+  // Priority: runtime (set via banner) → localStorage → hardcoded SCRIPT_URL
+  if (window._RUNTIME_SCRIPT_URL) return window._RUNTIME_SCRIPT_URL;
+  const saved = localStorage.getItem('apps_script_url');
+  if (saved && saved.startsWith('https://script.google.com')) return saved;
+  if (SCRIPT_URL && !SCRIPT_URL.includes('YOUR_SCRIPT_ID')) return SCRIPT_URL;
+  return null;
+}
+
+async function jsonpCall(url) {
+  const effectiveUrl = getEffectiveScriptUrl();
+  if (!effectiveUrl) {
+    showBanner();
+    throw new Error('נא להגדיר SCRIPT_URL');
+  }
+
+  // Extract params from the passed url and append to effectiveUrl
+  let finalUrl;
+  if (url && url.includes('?')) {
+    const params = url.split('?')[1];
+    finalUrl = effectiveUrl + '?' + params;
+  } else if (url && !url.startsWith('/') && !url.startsWith('http')) {
+    finalUrl = effectiveUrl + url;
+  } else {
+    finalUrl = effectiveUrl;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 45000);
+  try {
+    const res = await fetch(finalUrl, { signal: controller.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function recToParams(action, rec, rowIndex) {
+  const p = new URLSearchParams();
+  p.set('action', action);
+  if (rowIndex) p.set('rowIndex', rowIndex);
+  if (rec) {
+    p.set('id',           rec.id           || '');
+    p.set('name',         rec.name         || '');
+    p.set('region',       rec.region       || '');
+    p.set('address',      rec.address      || '');
+    p.set('monitor_date', rec.monitor_date || '');
+    p.set('factors',      rec.factors      || '');
+    p.set('visit_date',   rec.visit_date   || '');
+    p.set('visit_type',   rec.visit_type   || '');
+    p.set('inspector',    rec.inspector    || '');
+    p.set('status',       rec.status       || '');
+    p.set('notes',        rec.notes        || '');
+    p.set('created_at',   rec.created_at   || '');
+  }
+  return p.toString();
+}
+
+async function apiCall(payload) {
+  const url = getScriptUrl();
+  // url optional — proxy handles it
+
+  // url can be null — proxy handles routing via GOOGLE_SCRIPT_URL env var
+  let params = '';
+  if (payload.action === 'add') {
+    params = recToParams('add', payload.record ? sheetRowToRec(payload.record) : null);
+  } else if (payload.action === 'update') {
+    params = recToParams('update', payload.record ? sheetRowToRec(payload.record) : null, payload.id);
+  } else if (payload.action === 'delete') {
+    params = recToParams('delete', null, payload.id);
+  }
+
+  return await jsonpCall('?' + params);
+}
+
+function sheetRowToRec(row) {
+  return {
+    id:           row['מספר תיק']         || '',
+    name:         row['שם המפעל']          || '',
+    region:       row['אזור פיקוח']        || '',
+    address:      row['כתובת']             || '',
+    monitor_date: row['תאריך ניטור אחרון'] || '',
+    factors:      row['גורמי חשיפה']       || '',
+    visit_date:   row['תאריך ביקור אחרון'] || '',
+    visit_type:   row['מטרת ביקור']        || '',
+    inspector:    row['מפקח אחראי']        || '',
+    status:       row['סטטוס טיפול']       || '',
+    notes:        row['הערות']             || '',
+    created_at:   row['תאריך הוספה']       || ''
+  };
+}
+
+async function loadData() {
+  const url = getScriptUrl();
+  // url optional — proxy handles it
+  showSpinner(true);
+  try {
+    const data = await jsonpCall('?action=getAll&t=' + Date.now());
+    records = (data.records || []).map(r => ({
+      _row:         r['_row'],
+      id:           r['מספר תיק']         || '',
+      name:         r['שם המפעל']          || '',
+      region:       r['אזור פיקוח']        || '',
+      address:      r['כתובת']             || '',
+      monitor_date: cleanDate(r['תאריך ניטור אחרון']),
+      factors:      r['גורמי חשיפה']       || '',
+      visit_date:   cleanDate(r['תאריך ביקור אחרון']),
+      visit_type:   r['מטרת ביקור']        || '',
+      inspector:    r['מפקח אחראי']        || '',
+      status:       r['סטטוס טיפול']       || '',
+      notes:        r['הערות']             || '',
+      created_at:   r['תאריך הוספה']       || ''
+    }));
+    updateStats();
+    renderTable();
+  } catch(e) {
+    showToast('❌ שגיאה בטעינת נתונים: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+function applyScriptUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    alert('כתובת לא תקינה. היא חייבת להתחיל ב-https://script.google.com');
+    return;
+  }
+  // GitHub version: save to localStorage and update runtime variable
+  window._RUNTIME_SCRIPT_URL = url;
+  localStorage.setItem('apps_script_url', url);
+  document.getElementById('configBanner').style.display = 'none';
+  showToast('✅ החיבור הוגדר! טוען נתונים...');
+  loadData();
+}
+
+// ─── BULK DELETE ───────────────────────────────────────────────
+function toggleCheckAll(masterCb) {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = masterCb.checked);
+  updateDeleteBtn();
+}
+
+function updateDeleteBtn() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  const btn = document.getElementById('btnDeleteSelected');
+  const cnt = document.getElementById('selectedCount');
+  if (checked.length > 0) {
+    btn.style.display = '';
+    cnt.textContent = checked.length;
+  } else {
+    btn.style.display = 'none';
+  }
+  // Sync master checkbox state
+  const all = document.querySelectorAll('.row-check');
+  const master = document.getElementById('checkAll');
+  if (master) {
+    master.indeterminate = checked.length > 0 && checked.length < all.length;
+    master.checked = all.length > 0 && checked.length === all.length;
+  }
+}
+
+async function deleteSelected() {
+  const checked = [...document.querySelectorAll('.row-check:checked')];
+  if (checked.length === 0) return;
+  const indices = checked.map(cb => parseInt(cb.dataset.idx));
+  const names = indices.map(i => records[i].name).join('\n• ');
+  if (!confirm(`למחוק ${indices.length} רשומות?\n\n• ${names}`)) return;
+
+  showSpinner(true);
+  try {
+    // Delete one by one (sequential to avoid race conditions)
+    for (const idx of indices.sort((a,b) => b-a)) {
+      await apiCall({ action: 'delete', id: records[idx]._row });
+    }
+    showToast(`🗑️ נמחקו ${indices.length} רשומות`);
+    await loadData();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+// ─── NEW RECORDS EXPORT ────────────────────────────────────────
+// Logic: each record gets a _row index from Google Sheets.
+// We save the highest _row seen at last export in localStorage.
+// "New" = records with _row > lastExportedRow.
+
+function getLastExportedRow() {
+  return parseInt(localStorage.getItem('last_exported_row') || '0', 10);
+}
+
+function exportNewRecords() {
+  // אם יש רשומות מסומנות בצ'קבוקס — ייצא רק אותן
+  const checkedBoxes = [...document.querySelectorAll('.row-check:checked')];
+  if (checkedBoxes.length > 0) {
+    const indices = checkedBoxes.map(cb => parseInt(cb.dataset.idx));
+    const selectedRecs = indices.map(i => records[i]);
+    const wb = XLSX.utils.book_new();
+    const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                     'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות','תאריך הוספה'];
+    const data = [headers, ...selectedRecs.map(r => [
+      r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+      r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes, fmtXls(r.created_at)
+    ])];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25,14].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, 'רשומות נבחרות');
+    XLSX.writeFile(wb, 'רשומות_נבחרות_' + today() + '.xlsx');
+    showToast('🆕 יוצאו ' + selectedRecs.length + ' רשומות נבחרות');
+    return;
+  }
+
+  // אין סימון — ייצא לפי high-water mark (רשומות חדשות מאז הייצוא האחרון)
+  const lastRow = getLastExportedRow();
+  const newRecs = records.filter(r => (r._row || 0) > lastRow);
+
+  if (newRecs.length === 0) {
+    alert('אין רשומות חדשות מאז הייצוא האחרון.\nסה"כ רשומות ידועות: ' + records.length +
+          '\n\nרמז: אם זו הפעם הראשונה, לחץ "✔ סמן הכל נשלח" כדי לאפס את הבסיס.');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','תאריך ביקור אחרון','מטרת ביקור','מפקח אחראי','סטטוס','הערות','תאריך הוספה'];
+  const data = [headers, ...newRecs.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, fmtXls(r.visit_date), r.visit_type, r.inspector, r.status, r.notes, fmtXls(r.created_at)
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25,14].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'רשומות חדשות');
+  XLSX.writeFile(wb, 'רשומות_חדשות_' + today() + '.xlsx');
+
+  // Save new high-water mark
+  const maxRow = Math.max(...newRecs.map(r => r._row || 0));
+  localStorage.setItem('last_exported_row', String(maxRow));
+  showToast('🆕 יוצאו ' + newRecs.length + ' רשומות חדשות');
+}
+
+async function markAllExported() {
+  if (records.length === 0) { alert('אין רשומות'); return; }
+
+  // בדוק אם יש רשומות מסומנות בצ'קבוקס
+  const checkedBoxes = [...document.querySelectorAll('.row-check:checked')];
+  const selectedIndices = checkedBoxes.map(cb => parseInt(cb.dataset.idx));
+  const isSelective = selectedIndices.length > 0;
+
+  // קבע את הרשומות לעדכון
+  const pool = isSelective ? selectedIndices.map(i => records[i]) : records;
+  const FINAL_STATUSES = ['נשלח למחוז', 'מתוכנן ביקור עם מעבדה', 'טופל ע"י מפקח', 'טופל יחד עם מעבדה'];
+  const toUpdate = pool.filter(r => !FINAL_STATUSES.includes(r.status));
+
+  const scopeLabel = isSelective ? `${pool.length} רשומות נבחרות` : `כל ${records.length} הרשומות`;
+  const msg = toUpdate.length > 0
+    ? `לסמן ${scopeLabel} כנשלח?\n(${toUpdate.length} רשומות יעודכנו לסטטוס "נשלח למחוז")`
+    : `לסמן ${scopeLabel} כנשלח?\n(כל הרשומות כבר בסטטוס מתאים)`;
+  if (!confirm(msg)) return;
+
+  // עדכן high-water mark רק אם מעדכנים הכל
+  if (!isSelective) {
+    const maxRow = Math.max(...records.map(r => r._row || 0));
+    localStorage.setItem('last_exported_row', String(maxRow));
+  }
+
+  if (toUpdate.length === 0) {
+    showToast('✔ סומן כנשלח – אין עדכוני סטטוס נדרשים');
+    return;
+  }
+
+  showSpinner(true);
+  try {
+    for (const r of toUpdate) {
+      r.status = 'נשלח למחוז';
+      await apiCall({ action: 'update', id: r._row, record: recToSheetRow(r) });
+    }
+    showToast('✔ ' + toUpdate.length + ' רשומות עודכנו לסטטוס "נשלח למחוז"');
+    await loadData();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+
+// ─── ARCHIVE LOGIC ─────────────────────────────────────────────────
+let archiveRecords = [];
+let archivingIndex = -1;
+
+function openArchiveModal(index) {
+  archivingIndex = index;
+  document.getElementById('archiveModalName').textContent = records[index].name;
+  document.getElementById('arch_type').selectedIndex = 0;
+  document.getElementById('arch_summary').value = '';
+  document.getElementById('archiveModal').classList.add('open');
+}
+
+function closeArchiveModal() {
+  document.getElementById('archiveModal').classList.remove('open');
+  archivingIndex = -1;
+}
+
+async function confirmArchive() {
+  if (archivingIndex < 0) return;
+  const summary   = document.getElementById('arch_summary').value.trim();
+  const closeType = document.getElementById('arch_type').value;
+  const rec = records[archivingIndex];
+
+  showSpinner(true);
+  try {
+    // Step 1: add to archive sheet
+    const p1 = new URLSearchParams();
+    p1.set('action',       'addToArchive');
+    p1.set('id',           rec.id           || '');
+    p1.set('name',         rec.name         || '');
+    p1.set('region',       rec.region       || '');
+    p1.set('address',      rec.address      || '');
+    p1.set('monitor_date', rec.monitor_date || '');
+    p1.set('factors',      rec.factors      || '');
+    p1.set('visit_date',   rec.visit_date   || '');
+    p1.set('visit_type',   rec.visit_type   || '');
+    p1.set('inspector',    rec.inspector    || '');
+    p1.set('status',       rec.status       || '');
+    p1.set('notes',        rec.notes        || '');
+    p1.set('created_at',   rec.created_at   || '');
+    p1.set('summary',      summary);
+    p1.set('close_type',   closeType);
+    await jsonpCall('?' + p1.toString());
+
+    // Step 2: delete from active sheet
+    const p2 = new URLSearchParams();
+    p2.set('action',   'delete');
+    p2.set('rowIndex', rec._row);
+    await jsonpCall('?' + p2.toString());
+
+    closeArchiveModal();
+    showToast('🗃️ המפעל הועבר לארכיון בהצלחה');
+    await loadData();
+    await loadArchive();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+async function loadArchive() {
+  const url = getScriptUrl();
+  // proxy mode — no URL required
+  try {
+    const data = await jsonpCall('?action=getArchive&t=' + Date.now());
+    archiveRecords = (data.records || []).map(r => ({
+      _row:         r['_row'],
+      id:           r['מספר תיק']         || '',
+      name:         r['שם המפעל']          || '',
+      region:       r['אזור פיקוח']        || '',
+      address:      r['כתובת']             || '',
+      monitor_date: cleanDate(r['תאריך ניטור אחרון']),
+      factors:      r['גורמי חשיפה']       || '',
+      visit_date:   cleanDate(r['תאריך ביקור אחרון']),
+      visit_type:   r['מטרת ביקור']        || '',
+      inspector:    r['מפקח אחראי']        || '',
+      status:       r['סטטוס טיפול']       || '',
+      notes:        r['הערות']             || '',
+      created_at:   r['תאריך הוספה']       || '',
+      close_date:   r['תאריך סגירה']       || '',
+      summary:      r['סיכום טיפול']       || '',
+      close_type:   r['סוג טיפול']         || ''
+    }));
+    renderArchive();
+    updateStats();
+  } catch(e) {
+    // silent fail – archive tab will show empty
+  }
+}
+
+function renderArchive() {
+  const search    = (document.getElementById('archiveSearch')?.value || '').toLowerCase();
+  const regionF   = document.getElementById('archiveFilterRegion')?.value || '';
+  const typeF     = document.getElementById('archiveFilterType')?.value || '';
+
+  let data = archiveRecords.filter(r => {
+    const text = Object.values(r).join(' ').toLowerCase();
+    return (!search || text.includes(search))
+        && (!regionF || r.region === regionF)
+        && (!typeF   || r.close_type === typeF);
+  });
+
+  const countEl = document.getElementById('archiveCount');
+  if (countEl) countEl.textContent = `(${archiveRecords.length} רשומות)`;
+
+  const tbody = document.getElementById('archiveBody');
+  if (!tbody) return;
+
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="no-data">הארכיון ריק</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(r => {
+    const cfg = getRegionCfg(r.region);
+    return `<tr>
+      <td><strong>${r.id || '—'}</strong></td>
+      <td>${r.name}</td>
+      <td><span class="badge ${cfg.badge}">${r.region || '—'}</span></td>
+      <td>${r.inspector || '—'}</td>
+      <td>${r.close_type ? `<span class="archive-badge">${r.close_type}</span>` : '—'}</td>
+      <td><span class="summary-text" title="${r.summary}">${r.summary || '—'}</span></td>
+      <td>${r.close_date || '—'}</td>
+      <td>
+        <button class="btn btn-restore" style="padding:4px 10px; font-size:12px;" onclick="restoreRecord(${r._row})">↩️ החזר לפעילים</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function restoreRecord(rowIndex) {
+  if (!confirm('להחזיר מפעל זה לרשימה הפעילה?')) return;
+  showSpinner(true);
+  try {
+    const p = new URLSearchParams();
+    p.set('action', 'restore');
+    p.set('rowIndex', rowIndex);
+    await jsonpCall('?' + p.toString());
+    showToast('↩️ המפעל הוחזר לרשימה הפעילה');
+    await loadData();
+    await loadArchive();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+function exportArchive() {
+  if (archiveRecords.length === 0) { alert('הארכיון ריק'); return; }
+  const wb = XLSX.utils.book_new();
+  const headers = ['מספר תיק','שם המפעל','אזור פיקוח','כתובת','תאריך ניטור אחרון',
+                   'גורמי חשיפה','מפקח אחראי','סטטוס','סוג טיפול','סיכום טיפול','תאריך סגירה'];
+  const rows = [headers, ...archiveRecords.map(r => [
+    r.id, r.name, r.region, r.address, fmtXls(r.monitor_date),
+    r.factors, r.inspector, r.status, r.close_type, r.summary, r.close_date
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [8,30,12,25,14,35,16,18,16,45,14].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'ארכיון');
+  XLSX.writeFile(wb, 'ארכיון_טיפול_' + today() + '.xlsx');
+  showToast('📥 ארכיון יוצא בהצלחה (' + archiveRecords.length + ' רשומות)');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+// גרסת GitHub Pages: אם ה-URL לא הוגדר בשום מקום — הצג באנר הגדרה
+if (!getEffectiveScriptUrl()) {
+  showBanner();
+} else {
+  loadData();
+}
+</script>
+</body>
+</html>
