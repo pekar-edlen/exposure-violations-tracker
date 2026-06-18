@@ -335,6 +335,33 @@
   }
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 
+  /* Inspector autocomplete */
+  .inspector-wrap { position: relative; }
+  .inspector-wrap input { width: 100%; }
+  .inspector-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0; left: 0;
+    background: white;
+    border: 1px solid #cbd5e0;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  .inspector-dropdown.open { display: block; }
+  .inspector-dropdown div {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: right;
+  }
+  .inspector-dropdown div:hover,
+  .inspector-dropdown div.active { background: #ebf4ff; }
+
 
   /* ARCHIVE */
   .btn-archive { background: #fbd38d; color: #744210; }
@@ -351,7 +378,6 @@
 </style>
 </head>
 <body>
-<datalist id="inspectors-list"></datalist>
 
 <header>
   <div class="flag">🏭</div>
@@ -428,7 +454,10 @@
         </div>
         <div class="form-group">
           <label>מפקח אחראי</label>
-          <input type="text" id="f_inspector" placeholder="שם המפקח" list="inspectors-list" autocomplete="off">
+          <div class="inspector-wrap">
+            <input type="text" id="f_inspector" placeholder="שם המפקח" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="inspectorSearch(this,'inspector-drop-f')" onkeydown="inspectorKey(event,'inspector-drop-f')">
+            <div class="inspector-dropdown" id="inspector-drop-f"></div>
+          </div>
         </div>
         <div class="form-group">
           <label>סטטוס טיפול</label>
@@ -656,7 +685,10 @@
       </div>
       <div class="form-group">
         <label>מפקח אחראי</label>
-        <input type="text" id="e_inspector" list="inspectors-list" autocomplete="off">
+        <div class="inspector-wrap">
+          <input type="text" id="e_inspector" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="inspectorSearch(this,'inspector-drop-e')" onkeydown="inspectorKey(event,'inspector-drop-e')">
+          <div class="inspector-dropdown" id="inspector-drop-e"></div>
+        </div>
       </div>
       <div class="form-group">
         <label>סטטוס טיפול</label>
@@ -1451,6 +1483,7 @@ async function loadData() {
     }));
     updateStats();
     renderTable();
+    updateInspectorDropdowns();
   } catch(e) {
     showToast('❌ שגיאה בטעינת נתונים: ' + e.message);
   } finally {
@@ -1795,6 +1828,47 @@ if (!getEffectiveScriptUrl()) {
 } else {
   loadData();
 }
+
+// ── Inspector autocomplete (Safari-safe, no datalist) ──────────────────
+let inspectorList = [];
+
+function updateInspectorDropdowns() {
+  inspectorList = [...new Set(records.map(r => r.inspector).filter(Boolean))].sort((a,b) => a.localeCompare(b,'he'));
+}
+
+function inspectorSearch(input, dropId) {
+  const q = input.value.trim().toLowerCase();
+  const drop = document.getElementById(dropId);
+  if (!drop) return;
+  const matches = q ? inspectorList.filter(n => n.toLowerCase().includes(q)) : inspectorList;
+  if (!matches.length) { drop.classList.remove('open'); return; }
+  drop.innerHTML = matches.map(n => `<div onmousedown="pickInspector('${n.replace(/'/g,"\\'")}','${input.id}','${dropId}')">${n}</div>`).join('');
+  drop.classList.add('open');
+}
+
+function pickInspector(name, inputId, dropId) {
+  document.getElementById(inputId).value = name;
+  document.getElementById(dropId).classList.remove('open');
+}
+
+function inspectorKey(e, dropId) {
+  const drop = document.getElementById(dropId);
+  if (!drop || !drop.classList.contains('open')) return;
+  const items = drop.querySelectorAll('div');
+  let idx = [...items].findIndex(d => d.classList.contains('active'));
+  if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx+1, items.length-1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx-1, 0); }
+  else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); items[idx].dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if (e.key === 'Escape') { drop.classList.remove('open'); return; }
+  items.forEach((d,i) => d.classList.toggle('active', i===idx));
+  if (items[idx]) items[idx].scrollIntoView({block:'nearest'});
+}
+
+document.addEventListener('click', e => {
+  document.querySelectorAll('.inspector-dropdown').forEach(d => {
+    if (!d.previousElementSibling || !d.previousElementSibling.contains(e.target)) d.classList.remove('open');
+  });
+});
 </script>
 </body>
 </html>
