@@ -351,6 +351,7 @@
 </style>
 </head>
 <body>
+<datalist id="inspectors-list"></datalist>
 
 <header>
   <div class="flag">🏭</div>
@@ -427,7 +428,7 @@
         </div>
         <div class="form-group">
           <label>מפקח אחראי</label>
-          <input type="text" id="f_inspector" placeholder="שם המפקח">
+          <input type="text" id="f_inspector" placeholder="שם המפקח" list="inspectors-list" autocomplete="off">
         </div>
         <div class="form-group">
           <label>סטטוס טיפול</label>
@@ -655,7 +656,7 @@
       </div>
       <div class="form-group">
         <label>מפקח אחראי</label>
-        <input type="text" id="e_inspector">
+        <input type="text" id="e_inspector" list="inspectors-list" autocomplete="off">
       </div>
       <div class="form-group">
         <label>סטטוס טיפול</label>
@@ -893,6 +894,12 @@ function updateInspectorFilter() {
   const inspectors = [...new Set(records.map(r => r.inspector).filter(Boolean))].sort((a,b) => a.localeCompare(b,'he'));
   sel.innerHTML = '<option value="">כל המפקחים</option>' + inspectors.map(i => `<option value="${i}">${i}</option>`).join('');
   if (inspectors.includes(current)) sel.value = current;
+
+  // Update datalist for inspector autocomplete in add/edit forms
+  const dl = document.getElementById('inspectors-list');
+  if (dl) {
+    dl.innerHTML = inspectors.map(i => `<option value="${i}">`).join('');
+  }
 }
 
 function getFilteredRecords() {
