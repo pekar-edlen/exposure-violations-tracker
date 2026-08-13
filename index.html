@@ -4,25 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מעקב מפעלים – חשיפות מעל הרמה המותרת</title>
-<link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="מעקב חריגות">
-<script>
-(function(){
-  const c = document.createElement('canvas');
-  c.width = c.height = 180;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#1e3a5f';
-  ctx.beginPath();
-  ctx.roundRect(0, 0, 180, 180, 32);
-  ctx.fill();
-  ctx.font = '100px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🏭', 90, 95);
-  document.getElementById('apple-touch-icon').href = c.toDataURL('image/png');
-})();
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -335,33 +316,6 @@
   }
   .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
 
-  /* Inspector autocomplete */
-  .inspector-wrap { position: relative; }
-  .inspector-wrap input { width: 100%; }
-  .inspector-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0; left: 0;
-    background: white;
-    border: 1px solid #cbd5e0;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-    max-height: 200px;
-    overflow-y: auto;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  }
-  .inspector-dropdown.open { display: block; }
-  .inspector-dropdown div {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 14px;
-    text-align: right;
-  }
-  .inspector-dropdown div:hover,
-  .inspector-dropdown div.active { background: #ebf4ff; }
-
 
   /* ARCHIVE */
   .btn-archive { background: #fbd38d; color: #744210; }
@@ -378,6 +332,7 @@
 </style>
 </head>
 <body>
+<datalist id="inspectors-list"></datalist>
 
 <header>
   <div class="flag">🏭</div>
@@ -418,6 +373,7 @@
           <select id="f_region">
             <option value="">-- בחר אזור --</option>
             <option>צפון</option>
+            <option>מרכז</option>
             <option>דרום</option>
             <option>ירושלים</option>
             <option>ת"א - תעשייה</option>
@@ -454,16 +410,13 @@
         </div>
         <div class="form-group">
           <label>מפקח אחראי</label>
-          <div class="inspector-wrap">
-            <input type="text" id="f_inspector" placeholder="שם המפקח" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="inspectorSearch(this,'inspector-drop-f')" onkeydown="inspectorKey(event,'inspector-drop-f')">
-            <div class="inspector-dropdown" id="inspector-drop-f"></div>
-          </div>
+          <input type="text" id="f_inspector" placeholder="שם המפקח" list="inspectors-list" autocomplete="off">
         </div>
         <div class="form-group">
           <label>סטטוס טיפול</label>
           <select id="f_status">
             <option value="">-- בחר --</option>
-            <option>נקלט לרשימה</option>
+            <option>נקלט לרישה</option>
             <option>נשלח למחוז</option>
             <option>מתוכנן ביקור עם מעבדה</option>
             <option>טופל ע"י מפקח</option>
@@ -491,6 +444,7 @@
         <select id="filterRegion" onchange="renderTable()">
           <option value="">כל האזורים</option>
           <option>צפון</option>
+          <option>מרכז</option>
           <option>דרום</option>
           <option>ירושלים</option>
           <option>ת"א - תעשייה</option>
@@ -498,7 +452,7 @@
         </select>
         <select id="filterStatus" onchange="renderTable()">
           <option value="">כל הסטטוסים</option>
-          <option>נקלט לרשימה</option>
+          <option>נקלט לרישה</option>
           <option>נשלח למחוז</option>
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
@@ -545,6 +499,7 @@
           <select id="exportRegionSelect" style="padding:7px 10px; font-size:13px; border:1.5px solid #cbd5e0; border-radius:6px; min-width:160px;">
             <option value="">-- בחר אזור --</option>
             <option>צפון</option>
+            <option>מרכז</option>
             <option>דרום</option>
             <option>ירושלים</option>
             <option>ת"א - תעשייה</option>
@@ -569,6 +524,7 @@
         <input type="text" id="archiveSearch" placeholder="🔍  חיפוש בארכיון..." oninput="renderArchive()">
         <select id="archiveFilterRegion" onchange="renderArchive()">
           <option value="">כל האזורים</option>
+          <option>צפון</option><option>מרכז</option><option>דרום</option>
           <option>ירושלים</option><option>ת"א - תעשייה</option><option>ת"א - בניה</option>
         </select>
         <select id="archiveFilterType" onchange="renderArchive()">
@@ -649,6 +605,7 @@
         <select id="e_region">
           <option value="">-- בחר אזור --</option>
           <option>צפון</option>
+          <option>מרכז</option>
           <option>דרום</option>
           <option>ירושלים</option>
           <option>ת"א - תעשייה</option>
@@ -685,16 +642,13 @@
       </div>
       <div class="form-group">
         <label>מפקח אחראי</label>
-        <div class="inspector-wrap">
-          <input type="text" id="e_inspector" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="inspectorSearch(this,'inspector-drop-e')" onkeydown="inspectorKey(event,'inspector-drop-e')">
-          <div class="inspector-dropdown" id="inspector-drop-e"></div>
-        </div>
+        <input type="text" id="e_inspector" list="inspectors-list" autocomplete="off">
       </div>
       <div class="form-group">
         <label>סטטוס טיפול</label>
         <select id="e_status">
           <option value="">-- בחר --</option>
-          <option>נקלט לרשימה</option>
+          <option>נקלט לרישה</option>
           <option>נשלח למחוז</option>
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
@@ -745,8 +699,7 @@
 <script>
 // ─── CONFIG ────────────────────────────────────────────────────
 // הדבק כאן את כתובת ה-Web App URL לאחר פרסום ב-Google Apps Script:
-// הדבק כאן את ה-Web App URL שלך מ-Google Apps Script:
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJok81BuEtlyP-XErKoAqqDA0Wz2AwrjO7sEpbzp75dmkLNaX9BJ7RBKRieN8blgnQ/exec';
+const SCRIPT_URL = 'USE_PROXY';
 
 let records = [];
 let editingIndex = -1;
@@ -884,7 +837,7 @@ function renderTable() {
     const rowKey = r._row || origIndex;
     const cfg = getRegionCfg(r.region);
     const statusColor = {
-      'נקלט לרשימה': '#fefcbf',
+      'נקלט לרישה': '#fefcbf',
       'נשלח למחוז': '#bee3f8',
       'מתוכנן ביקור עם מעבדה': '#feebc8',
       'טופל ע"י מפקח': '#c6f6d5',
@@ -1079,7 +1032,7 @@ function renderReport() {
       <thead><tr>
         <th>אזור פיקוח</th>
         <th>סה"כ מפעלים</th>
-        <th>נקלט לרשימה</th>
+        <th>נקלט לרישה</th>
         <th>נשלח למחוז</th>
         <th style="background:#d69e2e; color:white;">ממתין להתייחסות מחוז</th>
         <th>מתוכנן ביקור</th>
@@ -1095,7 +1048,7 @@ function renderReport() {
     const recs = region ? records.filter(r => r.region === region) : unregioned;
     if (recs.length === 0 && region !== null) continue;
     if (!region && recs.length === 0) continue;
-    const naklatLerisha = recs.filter(r => r.status === 'נקלט לרשימה').length;
+    const naklatLerisha = recs.filter(r => r.status === 'נקלט לרישה').length;
     const sent = recs.filter(r => r.status === 'נשלח למחוז').length;
     const waitingDistrict = sent; // כל מי שנשלח למחוז = ממתין להתייחסות
     const plannedOnly = recs.filter(r => r.status === 'מתוכנן ביקור').length;
@@ -1195,12 +1148,14 @@ function renderReport() {
 function updateStats() {
   const bar = document.getElementById('statsBar');
   const total = records.length;
-  const naklatLerisha = records.filter(r => r.status === 'נקלט לרשימה').length;
+  const naklatLerisha = records.filter(r => r.status === 'נקלט לרישה').length;
   const sentToDistrict = records.filter(r => r.status === 'נשלח למחוז').length;
   const plannedLab = records.filter(r => r.status === 'מתוכנן ביקור עם מעבדה').length;
   const treatedInspector = records.filter(r => r.status === 'טופל ע"י מפקח').length;
   const treatedLab = records.filter(r => r.status === 'טופל יחד עם מעבדה').length;
   const noVisit = records.filter(r => !r.visit_date).length;
+  const archivedTreated = (archiveRecords && archiveRecords.length) || 0;
+  const treatedTotal = treatedInspector + treatedLab + archivedTreated;
 
   const regionCounts = {};
   records.forEach(r => {
@@ -1209,10 +1164,10 @@ function updateStats() {
 
   let html = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">סה"כ מפעלים</div></div>
-    <div class="stat-card ta"><div class="stat-num" style="color:#d69e2e">${naklatLerisha}</div><div class="stat-label">נקלט לרשימה</div></div>
+    <div class="stat-card ta"><div class="stat-num" style="color:#d69e2e">${naklatLerisha}</div><div class="stat-label">נקלט לרישה</div></div>
     <div class="stat-card" style="border-top-color:#2b6cb0;"><div class="stat-num" style="color:#2b6cb0">${sentToDistrict}</div><div class="stat-label">נשלח למחוז</div></div>
     <div class="stat-card" style="border-top-color:#dd6b20;"><div class="stat-num" style="color:#dd6b20">${plannedLab}</div><div class="stat-label">מתוכנן ביקור עם מעבדה</div></div>
-    <div class="stat-card north"><div class="stat-num" style="color:#38a169">${treatedInspector + treatedLab}</div><div class="stat-label">טופל</div></div>
+    <div class="stat-card north"><div class="stat-num" style="color:#38a169">${treatedTotal}</div><div class="stat-label">טופל</div>${archivedTreated > 0 ? `<div style="font-size:10px;color:#a0aec0;margin-top:2px;">(${treatedInspector + treatedLab} פעיל + ${archivedTreated} בארכיון)</div>` : ''}</div>
     <div class="stat-card south"><div class="stat-num" style="color:#e53e3e">${noVisit}</div><div class="stat-label">לא נערך ביקור פיקוח</div></div>
   `;
 
@@ -1366,38 +1321,22 @@ function getScriptUrl() {
 }
 
 // ─── FETCH HELPER ──────────────────────────────────────────────
-// גרסת GitHub Pages — בקשות ישירות ל-Google Apps Script (ללא פרוקסי)
-function getEffectiveScriptUrl() {
-  // Priority: runtime (set via banner) → localStorage → hardcoded SCRIPT_URL
-  if (window._RUNTIME_SCRIPT_URL) return window._RUNTIME_SCRIPT_URL;
-  const saved = localStorage.getItem('apps_script_url');
-  if (saved && saved.startsWith('https://script.google.com')) return saved;
-  if (SCRIPT_URL && !SCRIPT_URL.includes('YOUR_SCRIPT_ID')) return SCRIPT_URL;
-  return null;
-}
-
+// כל הבקשות עוברות דרך Netlify Function (פרוקסי) – פותר CORS על iOS Safari
 async function jsonpCall(url) {
-  const effectiveUrl = getEffectiveScriptUrl();
-  if (!effectiveUrl) {
-    showBanner();
-    throw new Error('נא להגדיר SCRIPT_URL');
-  }
-
-  // Extract params from the passed url and append to effectiveUrl
-  let finalUrl;
-  if (url && url.includes('?')) {
-    const params = url.split('?')[1];
-    finalUrl = effectiveUrl + '?' + params;
-  } else if (url && !url.startsWith('/') && !url.startsWith('http')) {
-    finalUrl = effectiveUrl + url;
+  // Always route through Netlify proxy
+  let proxyUrl;
+  if (!url || url === 'null' || url.startsWith('/')) {
+    proxyUrl = url && url.startsWith('/') ? url : '/.netlify/functions/proxy';
   } else {
-    finalUrl = effectiveUrl;
+    const urlObj = new URL(url);
+    const params = urlObj.searchParams.toString();
+    proxyUrl = '/.netlify/functions/proxy' + (params ? '?' + params : '');
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45000);
   try {
-    const res = await fetch(finalUrl, { signal: controller.signal });
+    const res = await fetch(proxyUrl, { signal: controller.signal });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return await res.json();
   } finally {
@@ -1440,7 +1379,8 @@ async function apiCall(payload) {
     params = recToParams('delete', null, payload.id);
   }
 
-  return await jsonpCall('?' + params);
+  // Route through Netlify proxy — url param not needed
+  return await jsonpCall('/.netlify/functions/proxy?' + params);
 }
 
 function sheetRowToRec(row) {
@@ -1465,7 +1405,7 @@ async function loadData() {
   // url optional — proxy handles it
   showSpinner(true);
   try {
-    const data = await jsonpCall('?action=getAll&t=' + Date.now());
+    const data = await jsonpCall('/.netlify/functions/proxy?action=getAll&t=' + Date.now());
     records = (data.records || []).map(r => ({
       _row:         r['_row'],
       id:           r['מספר תיק']         || '',
@@ -1483,7 +1423,6 @@ async function loadData() {
     }));
     updateStats();
     renderTable();
-    updateInspectorDropdowns();
   } catch(e) {
     showToast('❌ שגיאה בטעינת נתונים: ' + e.message);
   } finally {
@@ -1497,8 +1436,7 @@ function applyScriptUrl() {
     alert('כתובת לא תקינה. היא חייבת להתחיל ב-https://script.google.com');
     return;
   }
-  // GitHub version: save to localStorage and update runtime variable
-  window._RUNTIME_SCRIPT_URL = url;
+  window._SCRIPT_URL = url;
   localStorage.setItem('apps_script_url', url);
   document.getElementById('configBanner').style.display = 'none';
   showToast('✅ החיבור הוגדר! טוען נתונים...');
@@ -1698,13 +1636,13 @@ async function confirmArchive() {
     p1.set('created_at',   rec.created_at   || '');
     p1.set('summary',      summary);
     p1.set('close_type',   closeType);
-    await jsonpCall('?' + p1.toString());
+    await jsonpCall('/.netlify/functions/proxy?' + p1.toString());
 
     // Step 2: delete from active sheet
     const p2 = new URLSearchParams();
     p2.set('action',   'delete');
     p2.set('rowIndex', rec._row);
-    await jsonpCall('?' + p2.toString());
+    await jsonpCall('/.netlify/functions/proxy?' + p2.toString());
 
     closeArchiveModal();
     showToast('🗃️ המפעל הועבר לארכיון בהצלחה');
@@ -1721,7 +1659,7 @@ async function loadArchive() {
   const url = getScriptUrl();
   // proxy mode — no URL required
   try {
-    const data = await jsonpCall('?action=getArchive&t=' + Date.now());
+    const data = await jsonpCall('/.netlify/functions/proxy?action=getArchive&t=' + Date.now());
     archiveRecords = (data.records || []).map(r => ({
       _row:         r['_row'],
       id:           r['מספר תיק']         || '',
@@ -1794,7 +1732,7 @@ async function restoreRecord(rowIndex) {
     const p = new URLSearchParams();
     p.set('action', 'restore');
     p.set('rowIndex', rowIndex);
-    await jsonpCall('?' + p.toString());
+    await jsonpCall('/.netlify/functions/proxy?' + p.toString());
     showToast('↩️ המפעל הוחזר לרשימה הפעילה');
     await loadData();
     await loadArchive();
@@ -1822,53 +1760,7 @@ function exportArchive() {
 }
 
 // ─── INIT ──────────────────────────────────────────────────────
-// גרסת GitHub Pages: אם ה-URL לא הוגדר בשום מקום — הצג באנר הגדרה
-if (!getEffectiveScriptUrl()) {
-  showBanner();
-} else {
-  loadData();
-}
-
-// ── Inspector autocomplete (Safari-safe, no datalist) ──────────────────
-let inspectorList = [];
-
-function updateInspectorDropdowns() {
-  inspectorList = [...new Set(records.map(r => r.inspector).filter(Boolean))].sort((a,b) => a.localeCompare(b,'he'));
-}
-
-function inspectorSearch(input, dropId) {
-  const q = input.value.trim().toLowerCase();
-  const drop = document.getElementById(dropId);
-  if (!drop) return;
-  const matches = q ? inspectorList.filter(n => n.toLowerCase().includes(q)) : inspectorList;
-  if (!matches.length) { drop.classList.remove('open'); return; }
-  drop.innerHTML = matches.map(n => `<div onmousedown="pickInspector('${n.replace(/'/g,"\\'")}','${input.id}','${dropId}')">${n}</div>`).join('');
-  drop.classList.add('open');
-}
-
-function pickInspector(name, inputId, dropId) {
-  document.getElementById(inputId).value = name;
-  document.getElementById(dropId).classList.remove('open');
-}
-
-function inspectorKey(e, dropId) {
-  const drop = document.getElementById(dropId);
-  if (!drop || !drop.classList.contains('open')) return;
-  const items = drop.querySelectorAll('div');
-  let idx = [...items].findIndex(d => d.classList.contains('active'));
-  if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx+1, items.length-1); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx-1, 0); }
-  else if (e.key === 'Enter' && idx >= 0) { e.preventDefault(); items[idx].dispatchEvent(new MouseEvent('mousedown')); return; }
-  else if (e.key === 'Escape') { drop.classList.remove('open'); return; }
-  items.forEach((d,i) => d.classList.toggle('active', i===idx));
-  if (items[idx]) items[idx].scrollIntoView({block:'nearest'});
-}
-
-document.addEventListener('click', e => {
-  document.querySelectorAll('.inspector-dropdown').forEach(d => {
-    if (!d.previousElementSibling || !d.previousElementSibling.contains(e.target)) d.classList.remove('open');
-  });
-});
+loadData();
 </script>
 </body>
 </html>
