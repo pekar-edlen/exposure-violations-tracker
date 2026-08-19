@@ -416,7 +416,7 @@
           <label>סטטוס טיפול</label>
           <select id="f_status">
             <option value="">-- בחר --</option>
-            <option>נקלט לרישה</option>
+            <option>נקלט לרשימה</option>
             <option>נשלח למחוז</option>
             <option>מתוכנן ביקור עם מעבדה</option>
             <option>טופל ע"י מפקח</option>
@@ -452,7 +452,7 @@
         </select>
         <select id="filterStatus" onchange="renderTable()">
           <option value="">כל הסטטוסים</option>
-          <option>נקלט לרישה</option>
+          <option>נקלט לרשימה</option>
           <option>נשלח למחוז</option>
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
@@ -648,7 +648,7 @@
         <label>סטטוס טיפול</label>
         <select id="e_status">
           <option value="">-- בחר --</option>
-          <option>נקלט לרישה</option>
+          <option>נקלט לרשימה</option>
           <option>נשלח למחוז</option>
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
@@ -837,7 +837,7 @@ function renderTable() {
     const rowKey = r._row || origIndex;
     const cfg = getRegionCfg(r.region);
     const statusColor = {
-      'נקלט לרישה': '#fefcbf',
+      'נקלט לרשימה': '#fefcbf',
       'נשלח למחוז': '#bee3f8',
       'מתוכנן ביקור עם מעבדה': '#feebc8',
       'טופל ע"י מפקח': '#c6f6d5',
@@ -1032,7 +1032,7 @@ function renderReport() {
       <thead><tr>
         <th>אזור פיקוח</th>
         <th>סה"כ מפעלים</th>
-        <th>נקלט לרישה</th>
+        <th>נקלט לרשימה</th>
         <th>נשלח למחוז</th>
         <th style="background:#d69e2e; color:white;">ממתין להתייחסות מחוז</th>
         <th>מתוכנן ביקור</th>
@@ -1048,7 +1048,7 @@ function renderReport() {
     const recs = region ? records.filter(r => r.region === region) : unregioned;
     if (recs.length === 0 && region !== null) continue;
     if (!region && recs.length === 0) continue;
-    const naklatLerisha = recs.filter(r => r.status === 'נקלט לרישה').length;
+    const naklatLerisha = recs.filter(r => r.status === 'נקלט לרשימה').length;
     const sent = recs.filter(r => r.status === 'נשלח למחוז').length;
     const waitingDistrict = sent; // כל מי שנשלח למחוז = ממתין להתייחסות
     const plannedOnly = recs.filter(r => r.status === 'מתוכנן ביקור').length;
@@ -1148,7 +1148,7 @@ function renderReport() {
 function updateStats() {
   const bar = document.getElementById('statsBar');
   const total = records.length;
-  const naklatLerisha = records.filter(r => r.status === 'נקלט לרישה').length;
+  const naklatLerisha = records.filter(r => r.status === 'נקלט לרשימה').length;
   const sentToDistrict = records.filter(r => r.status === 'נשלח למחוז').length;
   const plannedLab = records.filter(r => r.status === 'מתוכנן ביקור עם מעבדה').length;
   const treatedInspector = records.filter(r => r.status === 'טופל ע"י מפקח').length;
@@ -1164,7 +1164,7 @@ function updateStats() {
 
   let html = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">סה"כ מפעלים</div></div>
-    <div class="stat-card ta"><div class="stat-num" style="color:#d69e2e">${naklatLerisha}</div><div class="stat-label">נקלט לרישה</div></div>
+    <div class="stat-card ta"><div class="stat-num" style="color:#d69e2e">${naklatLerisha}</div><div class="stat-label">נקלט לרשימה</div></div>
     <div class="stat-card" style="border-top-color:#2b6cb0;"><div class="stat-num" style="color:#2b6cb0">${sentToDistrict}</div><div class="stat-label">נשלח למחוז</div></div>
     <div class="stat-card" style="border-top-color:#dd6b20;"><div class="stat-num" style="color:#dd6b20">${plannedLab}</div><div class="stat-label">מתוכנן ביקור עם מעבדה</div></div>
     <div class="stat-card north"><div class="stat-num" style="color:#38a169">${treatedTotal}</div><div class="stat-label">טופל</div>${archivedTreated > 0 ? `<div style="font-size:10px;color:#a0aec0;margin-top:2px;">(${treatedInspector + treatedLab} פעיל + ${archivedTreated} בארכיון)</div>` : ''}</div>
