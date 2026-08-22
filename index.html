@@ -942,7 +942,7 @@ function exportFiltered() {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, exportLabel.substring(0,31));
-  XLSX.writeFile(wb, 'ייצוא_' + exportLabel + '_' + today() + '.xlsx');
+  downloadXlsx(wb, 'ייצוא_' + exportLabel + '_' + today() + '.xlsx');
   showToast('📥 יוצאו ' + data.length + ' רשומות');
 }
 
@@ -1208,7 +1208,7 @@ function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, 'כל הרשומות');
-  XLSX.writeFile(wb, 'מעקב_חריגות_' + today() + '.xlsx');
+  downloadXlsx(wb, 'מעקב_חריגות_' + today() + '.xlsx');
   showToast('📥 קובץ Excel יוצא בהצלחה');
 }
 
@@ -1228,7 +1228,7 @@ function exportSingleRegion() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25].map(w => ({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, region.substring(0, 31));
-  XLSX.writeFile(wb, 'דוח_' + region + '_' + today() + '.xlsx');
+  downloadXlsx(wb, 'דוח_' + region + '_' + today() + '.xlsx');
   showToast('📥 דוח ' + region + ' יוצא בהצלחה (' + recs.length + ' רשומות)');
 }
 
@@ -1259,11 +1259,36 @@ function exportReportExcel() {
     XLSX.utils.book_append_sheet(wb, ws, region.substring(0, 31));
   }
 
-  XLSX.writeFile(wb, 'דוח_אזורי_חריגות_' + today() + '.xlsx');
+  downloadXlsx(wb, 'דוח_אזורי_חריגות_' + today() + '.xlsx');
   showToast('📊 דוח אזורי יוצא בהצלחה');
 }
 
 // ─── UTILS ─────────────────────────────────────────────────────
+// Safari fix (2026-08-22): XLSX.writeFile() internally falls back, in some
+// Safari builds, to navigating the tab to the blob: URL instead of
+// triggering a real download — that's the "Safari не может открыть
+// страницу blob:..." / WebKitBlobResource error. Building the Blob
+// ourselves and clicking a temporary <a download> avoids that internal
+// browser-sniffing path entirely and works the same in all browsers.
+function downloadXlsx(wb, filename) {
+  try {
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } catch (e) {
+    console.error('Export failed', e);
+    alert('שגיאה בייצוא הקובץ: ' + e.message);
+  }
+}
+
 // Format date for Excel export: YYYY-MM-DD → DD/MM/YYYY string
 function fmtXls(d) {
   if (!d) return '';
@@ -1515,7 +1540,7 @@ function exportNewRecords() {
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25,14].map(w => ({wch:w}));
     XLSX.utils.book_append_sheet(wb, ws, 'רשומות נבחרות');
-    XLSX.writeFile(wb, 'רשומות_נבחרות_' + today() + '.xlsx');
+    downloadXlsx(wb, 'רשומות_נבחרות_' + today() + '.xlsx');
     showToast('🆕 יוצאו ' + selectedRecs.length + ' רשומות נבחרות');
     return;
   }
@@ -1540,7 +1565,7 @@ function exportNewRecords() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [8,30,12,25,14,35,14,16,16,18,25,14].map(w => ({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, 'רשומות חדשות');
-  XLSX.writeFile(wb, 'רשומות_חדשות_' + today() + '.xlsx');
+  downloadXlsx(wb, 'רשומות_חדשות_' + today() + '.xlsx');
 
   // Save new high-water mark
   const maxRow = Math.max(...newRecs.map(r => r._row || 0));
@@ -1755,7 +1780,7 @@ function exportArchive() {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   ws['!cols'] = [8,30,12,25,14,35,16,18,16,45,14].map(w => ({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws, 'ארכיון');
-  XLSX.writeFile(wb, 'ארכיון_טיפול_' + today() + '.xlsx');
+  downloadXlsx(wb, 'ארכיון_טיפול_' + today() + '.xlsx');
   showToast('📥 ארכיון יוצא בהצלחה (' + archiveRecords.length + ' רשומות)');
 }
 
