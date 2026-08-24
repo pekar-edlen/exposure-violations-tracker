@@ -329,10 +329,35 @@
     .form-grid { grid-template-columns: 1fr; }
     .form-group.half { grid-column: span 1; }
   }
+
+  /* רשימת השלמה אוטומטית עצמאית (במקום datalist מובנה של הדפדפן —
+     לא תלויה ב-GPU/RDP, כי מצוירת ע"י הדף עצמו) */
+  .ac-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    z-index: 50;
+    background: white;
+    border: 1.5px solid #cbd5e0;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  }
+  .ac-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .ac-item:hover, .ac-item.active {
+    background: #ebf4ff;
+  }
 </style>
 </head>
 <body>
-<datalist id="inspectors-list"></datalist>
 
 <header>
   <div class="flag">🏭</div>
@@ -415,7 +440,10 @@
         </div>
         <div class="form-group">
           <label>מפקח אחראי</label>
-          <input type="text" id="f_inspector" placeholder="שם המפקח" list="inspectors-list" autocomplete="off">
+          <div style="position:relative;">
+            <input type="text" id="f_inspector" placeholder="שם המפקח" autocomplete="off">
+            <div class="ac-list" id="f_inspector_ac"></div>
+          </div>
         </div>
         <div class="form-group">
           <label>סטטוס טיפול</label>
@@ -672,7 +700,10 @@
       </div>
       <div class="form-group">
         <label>מפקח אחראי</label>
-        <input type="text" id="e_inspector" list="inspectors-list" autocomplete="off">
+        <div style="position:relative;">
+          <input type="text" id="e_inspector" autocomplete="off">
+          <div class="ac-list" id="e_inspector_ac"></div>
+        </div>
       </div>
       <div class="form-group">
         <label>סטטוס טיפול</label>
@@ -918,11 +949,52 @@ function updateInspectorFilter() {
   sel.innerHTML = '<option value="">כל המפקחים</option>' + inspectors.map(i => `<option value="${i}">${i}</option>`).join('');
   if (inspectors.includes(current)) sel.value = current;
 
-  // Update datalist for inspector autocomplete in add/edit forms
-  const dl = document.getElementById('inspectors-list');
-  if (dl) {
-    dl.innerHTML = inspectors.map(i => `<option value="${i}">`).join('');
+  // רשימת שמות המפקחים הידועים — המקור לרשימת ההשלמה האוטומטית העצמאית
+  // (החליפה datalist מובנה של הדפדפן, כי datalist לא עובד באמינות בסביבות
+  // RDP/וירטואליות ללא GPU אמיתי — ראה שיחה עם המשתמש 24.08.2026)
+  knownInspectors = inspectors;
+}
+
+// ─── השלמה אוטומטית עצמאית לשדה "מפקח אחראי" ───────────────────────
+// לא תלויה ב-<datalist> של הדפדפן, מצוירת לגמרי ע"י הדף עצמו (div רגיל),
+// ולכן עובדת גם כשאין האצת חומרה (GPU) — כפי שקורה בחלק מסביבות ה-RDP.
+let knownInspectors = [];
+
+function renderInspectorSuggestions(input, list) {
+  const q = input.value.trim().toLowerCase();
+  const matches = (q ? knownInspectors.filter(n => n.toLowerCase().includes(q)) : knownInspectors).slice(0, 8);
+  if (matches.length === 0) {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    return;
   }
+  list.innerHTML = matches.map(n =>
+    `<div class="ac-item" data-name="${n.replace(/"/g, '&quot;')}">${n}</div>`
+  ).join('');
+  list.style.display = 'block';
+}
+
+function setupInspectorAutocomplete(inputId, listId) {
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!input || !list) return;
+
+  input.addEventListener('input', () => renderInspectorSuggestions(input, list));
+  input.addEventListener('focus', () => renderInspectorSuggestions(input, list));
+  // blur עם השהיה קצרה — כדי לתת ל-mousedown על פריט ברשימה להספיק לפעול קודם
+  input.addEventListener('blur', () => setTimeout(() => { list.style.display = 'none'; }, 150));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { list.style.display = 'none'; }
+  });
+  // mousedown ולא click — כדי שהבחירה תיקלט לפני שה-blur של השדה מסתיר את הרשימה
+  list.addEventListener('mousedown', (e) => {
+    const item = e.target.closest('.ac-item');
+    if (!item) return;
+    e.preventDefault();
+    input.value = item.dataset.name;
+    list.style.display = 'none';
+    input.focus();
+  });
 }
 
 function getFilteredRecords() {
@@ -1961,6 +2033,8 @@ function exportArchive() {
 
 // ─── INIT ──────────────────────────────────────────────────────
 loadData();
+setupInspectorAutocomplete('f_inspector', 'f_inspector_ac');
+setupInspectorAutocomplete('e_inspector', 'e_inspector_ac');
 </script>
 </body>
 </html>
