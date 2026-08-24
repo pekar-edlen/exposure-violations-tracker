@@ -1491,7 +1491,9 @@ async function jsonpCall(url) {
   try {
     const res = await fetch(proxyUrl, { signal: controller.signal });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
   } finally {
     clearTimeout(timer);
   }
