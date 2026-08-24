@@ -1489,7 +1489,7 @@ async function jsonpCall(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45000);
   try {
-    const res = await fetch(proxyUrl, { signal: controller.signal });
+    const res = await fetch(proxyUrl, { signal: controller.signal, cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data && data.error) throw new Error(data.error);
@@ -1534,6 +1534,11 @@ async function apiCall(payload) {
   } else if (payload.action === 'delete') {
     params = recToParams('delete', null, payload.id);
   }
+
+  // מוסיף פרמטר ייחודי (חותמת זמן) כדי למנוע קאשינג של הדפדפן/CDN
+  // לבקשת כתיבה — אחרת בקשה חוזרת עם אותם פרמטרים בדיוק עלולה לקבל
+  // תשובה שמורה ("success") בלי שהקוד בפועל רץ מחדש ב-Apps Script.
+  params += (params ? '&' : '') + 'nocache=' + Date.now();
 
   // Route through Netlify proxy — url param not needed
   return await jsonpCall('/.netlify/functions/proxy?' + params);
