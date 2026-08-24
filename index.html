@@ -353,6 +353,7 @@
     <button class="tab-btn" onclick="switchTab('table')">📋 כל הרשומות</button>
     <button class="tab-btn" onclick="switchTab('report')">📊 דוח לפי אזורים</button>
     <button class="tab-btn" onclick="switchTab('archive')">🗃️ ארכיון טופל</button>
+    <button class="tab-btn" onclick="switchTab('stats')">📈 סטטיסטיקה</button>
   </div>
 
   <!-- TAB: FORM -->
@@ -421,6 +422,7 @@
             <option>מתוכנן ביקור עם מעבדה</option>
             <option>טופל ע"י מפקח</option>
             <option>טופל יחד עם מעבדה</option>
+            <option>תזכורת - לשלוח מחדש</option>
           </select>
         </div>
         <div class="form-group full">
@@ -457,6 +459,7 @@
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
           <option>טופל יחד עם מעבדה</option>
+          <option>תזכורת - לשלוח מחדש</option>
         </select>
         <select id="filterInspector" onchange="renderTable()">
           <option value="">כל המפקחים</option>
@@ -511,6 +514,25 @@
       </div>
     </div>
     <div id="reportContent"></div>
+  </div>
+
+  <!-- TAB: STATS -->
+  <div class="tab-content" id="tab-stats">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">📈 סטטיסטיקה לפי תקופה</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <button class="btn btn-secondary" onclick="setStatsPeriod('month')">החודש</button>
+        <button class="btn btn-secondary" onclick="setStatsPeriod('quarter')">הרבעון</button>
+        <button class="btn btn-secondary" onclick="setStatsPeriod('year')">השנה</button>
+        <span style="color:#a0aec0; margin:0 4px;">|</span>
+        <label style="font-size:13px; color:#4a5568;">מתאריך</label>
+        <input type="date" id="statsFrom" onchange="renderStats()" style="padding:6px 8px; border:1.5px solid #cbd5e0; border-radius:6px;">
+        <label style="font-size:13px; color:#4a5568;">עד תאריך</label>
+        <input type="date" id="statsTo" onchange="renderStats()" style="padding:6px 8px; border:1.5px solid #cbd5e0; border-radius:6px;">
+      </div>
+      <div id="statsRangeLabel" style="font-size:12px; color:#a0aec0; margin-bottom:6px;"></div>
+    </div>
+    <div id="statsContent"></div>
   </div>
 
 </div>
@@ -653,6 +675,7 @@
           <option>מתוכנן ביקור עם מעבדה</option>
           <option>טופל ע"י מפקח</option>
           <option>טופל יחד עם מעבדה</option>
+          <option>תזכורת - לשלוח מחדש</option>
         </select>
       </div>
       <div class="form-group full">
@@ -705,6 +728,7 @@ let records = [];
 let editingIndex = -1;
 let sortField = '';
 let sortAsc = true;
+let logRecords = [];
 
 // ─── API HELPERS ───────────────────────────────────────────────
 // (הגדרות מלאות בסעיף URL PERSISTENCE למטה)
@@ -766,6 +790,7 @@ function switchTab(name) {
   if (name === 'report') renderReport();
   if (name === 'form') { editingIndex = -1; clearForm(); }
   if (name === 'archive') loadArchive();
+  if (name === 'stats') { setStatsPeriod('month'); loadStatsData(); }
 }
 
 // ─── FORM ──────────────────────────────────────────────────────
@@ -841,7 +866,8 @@ function renderTable() {
       'נשלח למחוז': '#bee3f8',
       'מתוכנן ביקור עם מעבדה': '#feebc8',
       'טופל ע"י מפקח': '#c6f6d5',
-      'טופל יחד עם מעבדה': '#b2f5ea'
+      'טופל יחד עם מעבדה': '#b2f5ea',
+      'תזכורת - לשלוח מחדש': '#fed7d7'
     }[r.status] || '#f7fafc';
 
     return `<tr>
@@ -859,6 +885,7 @@ function renderTable() {
           <button class="btn-icon btn-edit" onclick="openEdit(${origIndex})" title="עריכה">✏️</button>
           <button class="btn-icon btn-del" onclick="deleteRecord(${origIndex})" title="מחיקה">🗑️</button>
           <button class="btn-icon btn-archive" onclick="openArchiveModal(${origIndex})" title="העבר לארכיון" style="background:#fbd38d; color:#744210; width:28px; height:28px; border:none; border-radius:5px; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center;">🗃️</button>
+          <button class="btn-icon btn-resend" onclick="markResend(${origIndex})" title="סמן לשלוח מחדש" style="background:#fed7d7; color:#742a2a; width:28px; height:28px; border:none; border-radius:5px; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; justify-content:center;">🔔</button>
         </div>
       </td>
     </tr>`;
@@ -953,6 +980,22 @@ async function deleteRecord(index) {
   try {
     await apiCall({ action: 'delete', id: rowIndex });
     showToast('🗑️ הרשומה נמחקה');
+    await loadData();
+  } catch(e) {
+    showToast('❌ שגיאה: ' + e.message);
+  } finally {
+    showSpinner(false);
+  }
+}
+
+async function markResend(index) {
+  const r = records[index];
+  if (!confirm(`לסמן את "${r.name}" בסטטוס "תזכורת - לשלוח מחדש"?`)) return;
+  showSpinner(true);
+  try {
+    r.status = 'תזכורת - לשלוח מחדש';
+    await apiCall({ action: 'update', id: r._row, record: recToSheetRow(r) });
+    showToast('🔔 הרשומה סומנה לשליחה מחדש');
     await loadData();
   } catch(e) {
     showToast('❌ שגיאה: ' + e.message);
@@ -1708,6 +1751,121 @@ async function loadArchive() {
   } catch(e) {
     // silent fail – archive tab will show empty
   }
+}
+
+// ─── STATS (סטטיסטיקה לפי תקופה) ────────────────────────────────────
+// מבוסס על לוג אירועים בגוגל שיטס (כל הוספה/שינוי סטטוס נרשם שם עם תאריך),
+// כי בטבלה הפעילה עצמה אין היסטוריה — רק מצב נוכחי.
+// חשוב: הלוג מתחיל להצטבר רק מרגע התקנת הגרסה הזו — אירועים ישנים מלפני
+// כן אינם קיימים בו, ולכן תקופות שקדמו להתקנה יראו נתונים חלקיים/ריקים.
+
+async function loadLog() {
+  try {
+    const data = await jsonpCall('/.netlify/functions/proxy?action=getLog&t=' + Date.now());
+    logRecords = (data.records || []).map(r => ({
+      date:   cleanDate(r['תאריך']) || '',
+      id:     r['מספר תיק']    || '',
+      name:   r['שם המפעל']     || '',
+      region: r['אזור פיקוח']   || '',
+      event:  r['סוג אירוע']    || '',
+      status: r['סטטוס']        || ''
+    }));
+  } catch(e) {
+    logRecords = [];
+  }
+}
+
+async function loadStatsData() {
+  await Promise.all([loadLog(), loadArchive()]);
+  renderStats();
+}
+
+// dd.MM.yyyy -> yyyy-MM-dd (להשוואה מחרוזתית פשוטה עם שדות ה-date)
+function displayToISO(s) {
+  if (!s) return '';
+  const m = String(s).match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return '';
+}
+
+function setStatsPeriod(kind) {
+  const now = new Date();
+  let from, to;
+  if (kind === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else if (kind === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3);
+    from = new Date(now.getFullYear(), q * 3, 1);
+    to   = new Date(now.getFullYear(), q * 3 + 3, 0);
+  } else if (kind === 'year') {
+    from = new Date(now.getFullYear(), 0, 1);
+    to   = new Date(now.getFullYear(), 11, 31);
+  } else {
+    return;
+  }
+  const toISO = d => d.toISOString().split('T')[0];
+  document.getElementById('statsFrom').value = toISO(from);
+  document.getElementById('statsTo').value   = toISO(to);
+  renderStats();
+}
+
+function renderStats() {
+  const from = document.getElementById('statsFrom')?.value || '';
+  const to   = document.getElementById('statsTo')?.value   || '';
+  const box  = document.getElementById('statsContent');
+  const lbl  = document.getElementById('statsRangeLabel');
+  if (!box) return;
+
+  if (!from || !to) {
+    box.innerHTML = '<p style="color:#a0aec0;">בחר תקופה למעלה.</p>';
+    if (lbl) lbl.textContent = '';
+    return;
+  }
+  if (lbl) lbl.textContent = `טווח: ${formatDate(from)} — ${formatDate(to)} (הסטטיסטיקה מבוססת על לוג אירועים שמצטבר החל מהתקנת גרסה זו; אירועים מלפני כן אינם נכללים)`;
+
+  const inRange = d => d && d >= from && d <= to;
+
+  const added     = logRecords.filter(r => r.event === 'נוסף' && inRange(r.date));
+  const sent      = logRecords.filter(r => r.event === 'שינוי סטטוס' && r.status === 'נשלח למחוז' && inRange(r.date));
+  const processed = logRecords.filter(r => r.event === 'שינוי סטטוס' &&
+    (r.status === 'טופל ע"י מפקח' || r.status === 'טופל יחד עם מעבדה') && inRange(r.date));
+  const archived  = (archiveRecords || []).filter(r => inRange(displayToISO(r.close_date)));
+
+  const regions = [...new Set([
+    ...added.map(r => r.region),
+    ...sent.map(r => r.region),
+    ...processed.map(r => r.region),
+    ...archived.map(r => r.region)
+  ].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
+
+  const countBy = (arr, region) => arr.filter(r => r.region === region).length;
+
+  let html = `
+    <div class="stats-bar" style="margin-bottom:16px;">
+      <div class="stat-card" style="border-top-color:#3182ce;"><div class="stat-num" style="color:#3182ce">${added.length}</div><div class="stat-label">נכנסו לרשימה</div></div>
+      <div class="stat-card" style="border-top-color:#2b6cb0;"><div class="stat-num" style="color:#2b6cb0">${sent.length}</div><div class="stat-label">נשלחו למחוז</div></div>
+      <div class="stat-card" style="border-top-color:#38a169;"><div class="stat-num" style="color:#38a169">${processed.length}</div><div class="stat-label">טופלו</div></div>
+      <div class="stat-card" style="border-top-color:#dd6b20;"><div class="stat-num" style="color:#dd6b20">${archived.length}</div><div class="stat-label">הועברו לארכיון</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">פילוח לפי אזור פיקוח</div>
+      <table style="width:100%;">
+        <thead><tr><th>אזור</th><th>נכנסו לרשימה</th><th>נשלחו למחוז</th><th>טופלו</th><th>הועברו לארכיון</th></tr></thead>
+        <tbody>
+          ${regions.length === 0 ? '<tr><td colspan="5" class="no-data">אין נתונים בטווח שנבחר</td></tr>' : regions.map(reg => `
+            <tr>
+              <td><span class="badge ${getRegionCfg(reg).badge}">${reg}</span></td>
+              <td>${countBy(added, reg)}</td>
+              <td>${countBy(sent, reg)}</td>
+              <td>${countBy(processed, reg)}</td>
+              <td>${countBy(archived, reg)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  box.innerHTML = html;
 }
 
 function renderArchive() {
