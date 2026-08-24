@@ -14,6 +14,7 @@ exports.handler = async function(event) {
     };
   }
 
+  // העבר את כל הפרמטרים מהדשבורד לגוגל
   const params = event.queryStringParameters || {};
   const qs = new URLSearchParams(params).toString();
   const targetUrl = SCRIPT_URL + (qs ? '?' + qs : '');
@@ -43,6 +44,10 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json; charset=utf-8'
+    'Content-Type': 'application/json; charset=utf-8',
+    // מונע קאשינג של הבקשה ע"י הדפדפן/CDN — קריטי לפעולות כתיבה
+    // (add/update/delete), אחרת בקשה חוזרת עם אותם פרמטרים עלולה
+    // לקבל תשובה שמורה בלי שהיא באמת רצה שוב
+    'Cache-Control': 'no-store, no-cache, must-revalidate'
   };
 }
