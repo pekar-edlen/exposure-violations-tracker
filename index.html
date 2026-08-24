@@ -385,6 +385,10 @@
           <label>כתובת</label>
           <input type="text" id="f_address" placeholder="עיר, רחוב ומספר">
         </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px; padding-top:22px;">
+          <input type="checkbox" id="f_military" style="width:18px; height:18px; cursor:pointer;">
+          <label for="f_military" style="margin:0; cursor:pointer;">🔒 מפעל ביטחוני (גישה חסומה למפקח)</label>
+        </div>
         <div class="form-group">
           <label>תאריך ניטור אחרון</label>
           <input type="date" id="f_monitor_date">
@@ -638,6 +642,10 @@
         <label>כתובת</label>
         <input type="text" id="e_address">
       </div>
+      <div class="form-group" style="display:flex; align-items:center; gap:8px; padding-top:22px;">
+        <input type="checkbox" id="e_military" style="width:18px; height:18px; cursor:pointer;">
+        <label for="e_military" style="margin:0; cursor:pointer;">🔒 מפעל ביטחוני (גישה חסומה למפקח)</label>
+      </div>
       <div class="form-group">
         <label>תאריך ניטור אחרון</label>
         <input type="date" id="e_monitor_date">
@@ -746,7 +754,8 @@ function recToSheetRow(rec) {
     'מפקח אחראי':        rec.inspector    || '',
     'סטטוס טיפול':       rec.status       || '',
     'הערות':             rec.notes        || '',
-    'תאריך הוספה':       rec.created_at   || ''
+    'תאריך הוספה':       rec.created_at   || '',
+    'מפעל ביטחוני':      rec.is_military  || ''
   };
 }
 
@@ -804,6 +813,7 @@ function clearForm() {
   ['f_monitor_date','f_visit_date'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('f_military').checked = false;
   document.getElementById('formTitle').textContent = 'הוספת מפעל חדש';
   editingIndex = -1;
 }
@@ -829,7 +839,8 @@ async function saveRecord() {
     inspector:    document.getElementById('f_inspector').value.trim(),
     status:       document.getElementById('f_status').value,
     notes:        document.getElementById('f_notes').value.trim(),
-    created_at:   new Date().toLocaleDateString('he-IL')
+    created_at:   new Date().toLocaleDateString('he-IL'),
+    is_military:  document.getElementById('f_military').checked ? 'כן' : ''
   };
 
   showSpinner(true);
@@ -877,7 +888,7 @@ function renderTable() {
       <td><span class="badge ${cfg.badge}">${r.region || '—'}</span></td>
       <td title="${r.factors}">${r.factors.length > 40 ? r.factors.substring(0,40)+'...' : r.factors}</td>
       <td>${r.monitor_date ? formatDate(r.monitor_date) : '—'}</td>
-      <td>${r.visit_date ? formatDate(r.visit_date) : '<span style="color:#e53e3e">⚠ לא ביקרו</span>'}</td>
+      <td>${r.visit_date ? formatDate(r.visit_date) : (r.is_military ? '<span style="color:#718096" title="מפעל ביטחוני — לא ניתן לאמת ביקור">🔒 ביטחוני</span>' : '<span style="color:#e53e3e">⚠ לא ביקרו</span>')}</td>
       <td>${r.inspector || '—'}</td>
       <td><span style="background:${statusColor}; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">${r.status || '—'}</span></td>
       <td>
@@ -1016,6 +1027,7 @@ function openEdit(index) {
   document.getElementById('e_visit_date').value = r.visit_date || '';
   document.getElementById('e_inspector').value = r.inspector || '';
   document.getElementById('e_notes').value = r.notes || '';
+  document.getElementById('e_military').checked = !!r.is_military;
   setSelectValue('e_region', r.region);
   setSelectValue('e_visit_type', r.visit_type);
   setSelectValue('e_status', r.status);
@@ -1035,6 +1047,7 @@ async function saveEdit() {
   r.inspector    = document.getElementById('e_inspector').value.trim();
   r.status       = document.getElementById('e_status').value;
   r.notes        = document.getElementById('e_notes').value.trim();
+  r.is_military  = document.getElementById('e_military').checked ? 'כן' : '';
 
   showSpinner(true);
   try {
@@ -1173,7 +1186,7 @@ function renderReport() {
         <td>${r.address || '—'}</td>
         <td>${r.factors || '—'}</td>
         <td>${r.monitor_date ? formatDate(r.monitor_date) : '—'}</td>
-        <td>${r.visit_date ? formatDate(r.visit_date) : '<span style="color:#e53e3e;font-weight:700">⚠ לא ביקרו</span>'}</td>
+        <td>${r.visit_date ? formatDate(r.visit_date) : (r.is_military ? '<span style="color:#718096;font-weight:700" title="מפעל ביטחוני — לא ניתן לאמת ביקור">🔒 ביטחוני</span>' : '<span style="color:#e53e3e;font-weight:700">⚠ לא ביקרו</span>')}</td>
         <td>${r.visit_type || '—'}</td>
         <td>${r.inspector || '—'}</td>
         <td><span style="background:${statusColor}; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600;">${r.status || '—'}</span></td>
@@ -1429,6 +1442,7 @@ function recToParams(action, rec, rowIndex) {
     p.set('status',       rec.status       || '');
     p.set('notes',        rec.notes        || '');
     p.set('created_at',   rec.created_at   || '');
+    p.set('is_military',  rec.is_military  || '');
   }
   return p.toString();
 }
@@ -1464,7 +1478,8 @@ function sheetRowToRec(row) {
     inspector:    row['מפקח אחראי']        || '',
     status:       row['סטטוס טיפול']       || '',
     notes:        row['הערות']             || '',
-    created_at:   row['תאריך הוספה']       || ''
+    created_at:   row['תאריך הוספה']       || '',
+    is_military:  row['מפעל ביטחוני']      || ''
   };
 }
 
@@ -1487,7 +1502,8 @@ async function loadData() {
       inspector:    r['מפקח אחראי']        || '',
       status:       r['סטטוס טיפול']       || '',
       notes:        r['הערות']             || '',
-      created_at:   r['תאריך הוספה']       || ''
+      created_at:   r['תאריך הוספה']       || '',
+      is_military:  r['מפעל ביטחוני']      || ''
     }));
     updateStats();
     renderTable();
@@ -1744,7 +1760,8 @@ async function loadArchive() {
       created_at:   r['תאריך הוספה']       || '',
       close_date:   r['תאריך סגירה']       || '',
       summary:      r['סיכום טיפול']       || '',
-      close_type:   r['סוג טיפול']         || ''
+      close_type:   r['סוג טיפול']         || '',
+      is_military:  r['מפעל ביטחוני']      || ''
     }));
     renderArchive();
     updateStats();
