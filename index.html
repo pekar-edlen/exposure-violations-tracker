@@ -1079,12 +1079,15 @@ async function markResend(index) {
     r.status = 'תזכורת - לשלוח מחדש';
     await apiCall({ action: 'update', id: r._row, record: recToSheetRow(r) });
     showToast('🔔 הרשומה סומנה לשליחה מחדש');
-    await loadData();
   } catch(e) {
     showToast('❌ שגיאה: ' + e.message);
-  } finally {
     showSpinner(false);
+    return;
   }
+  // הכתיבה הצליחה (התראת ההצלחה כבר הוצגה) — רענון הרשימה הוא שלב
+  // נפרד. אם הוא נתקל בשגיאה חולפת, ל-loadData יש ניסיון חוזר משלה,
+  // וממילא לא מציגים כאן שגיאה נוספת על פעולה שכבר הצליחה.
+  await loadData();
 }
 
 // ─── EDIT MODAL ────────────────────────────────────────────────
@@ -1126,9 +1129,15 @@ async function saveEdit() {
     await apiCall({ action: 'update', id: r._row, record: recToSheetRow(r) });
     closeModal();
     showToast('✏️ הרשומה עודכנה בהצלחה');
-    await loadData();
   } catch(e) {
     showToast('❌ שגיאה: ' + e.message);
+    showSpinner(false);
+    return;
+  }
+  // הכתיבה הצליחה (התראת ההצלחה כבר הוצגה) — רענון הרשימה הוא שלב
+  // נפרד, עם ניסיון חוזר משלו ב-loadData אם הוא נתקל בשגיאה חולפת.
+  try {
+    await loadData();
   } finally {
     showSpinner(false);
   }
@@ -1562,7 +1571,7 @@ function sheetRowToRec(row) {
   };
 }
 
-async function loadData() {
+async function loadData(isRetry) {
   const url = getScriptUrl();
   // url optional — proxy handles it
   showSpinner(true);
@@ -1587,6 +1596,13 @@ async function loadData() {
     updateStats();
     renderTable();
   } catch(e) {
+    // רענון הרשימה לפעמים נתקל בשגיאה חולפת של Google Sheets, במיוחד
+    // מיד אחרי כתיבה (עיבוד מושהה בצד גוגל). ניסיון נוסף אחד, אחרי
+    // השהיה קצרה, פותר את רוב המקרים בלי להטריד את המשתמש בהתראת שווא.
+    if (!isRetry) {
+      await new Promise(resolve => setTimeout(resolve, 900));
+      return loadData(true);
+    }
     showToast('❌ שגיאה בטעינת נתונים: ' + e.message);
   } finally {
     showSpinner(false);
